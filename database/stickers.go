@@ -1,6 +1,8 @@
 package database
 
-import "time"
+import (
+	"time"
+)
 
 // TODO rework DB, add file context (although it works as is, it shouldn't) and make use of all of this
 // mysql> describe stickers;
@@ -21,7 +23,19 @@ type Sticker struct {
 	AccessHash    int64
 	FileReference []byte
 	FileContext   string
-	Added         time.Time `gorm:"autoCreateTime"`
+	Added         time.Time `gorm:"->"`
+}
+
+// Fetch gets or creates sticker record with given DocumentID, AccessHash
+// and FileReference
+func (s *Sticker) Fetch() error {
+	err := DB.Where(&Sticker{DocumentID: s.DocumentID}).
+		Attrs(&Sticker{AccessHash: s.AccessHash, FileReference: s.FileReference}).
+		FirstOrCreate(s).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //func (s *Sticker) Download(ctx context.Context, api *tg.Client) ([]byte, error) {
