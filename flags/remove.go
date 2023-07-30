@@ -15,10 +15,10 @@ func Remove(m *tg.Message, u *database.User) (string, *tg.ReplyInlineMarkup) {
 		database.DB.Model(&u).Select("Flag", "FlagData").Updates(database.User{Flag: "", FlagData: ""})
 		return "Действие отменено", nil
 	} else {
-		if doc, ok := util.DocFromMedia(m.Media); ok {
+		if sticker, ok := util.StickerFromMedia(m.Media); ok {
 			// if there is a sticker, let's build a keyboard for it with
 			// tags to delete
-			markup, err := callback.BuildMarkup(doc.ID, u.UserID, 0)
+			markup, err := callback.BuildMarkup(sticker.DocumentID, u.UserID, 0)
 			if err != nil {
 				if errors.Is(err, callback.MarkupError) {
 					return "У этого стикера нет ни одного тега!", nil

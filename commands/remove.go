@@ -22,9 +22,9 @@ func Remove(ctx context.Context, answer *message.RequestBuilder, m *tg.Message, 
 		)
 		// check if there is a sticker in it
 		media := mRep.(*tg.MessagesMessages).Messages[0].(*tg.Message).Media
-		if doc, ok := util.DocFromMedia(media); ok {
+		if sticker, ok := util.StickerFromMedia(media); ok {
 			// if true, send message with tag deletion buttons
-			markup, err := callback.BuildMarkup(doc.ID, userID, 0)
+			markup, err := callback.BuildMarkup(sticker.DocumentID, userID, 0)
 			if err != nil {
 				if errors.Is(err, callback.MarkupError) {
 					answer.Text(ctx, "У этого стикера нет ни одного тега!")

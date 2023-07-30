@@ -13,10 +13,16 @@ func Add(m *tg.Message, u *database.User) string {
 		database.DB.Model(&u).Select("Flag", "FlagData").Updates(database.User{Flag: "", FlagData: ""})
 		return "Действие отменено"
 	} else {
-		if doc, ok := util.DocFromMedia(m.Media); ok {
+		if sticker, ok := util.StickerFromMedia(m.Media); ok {
 			// if there is a sticker, check if there is such a tag attached to it,
 			// if not — add one
-			sTag := database.StickerTag{User: u.UserID, DocumentID: doc.ID, AccessHash: doc.AccessHash, Tag: u.FlagData}
+			sTag := database.StickerTag{
+				User:       u.UserID,
+				StickerID:  sticker.ID,
+				DocumentID: sticker.DocumentID,
+				AccessHash: sticker.AccessHash,
+				Tag:        u.FlagData,
+			}
 			answer, _ := sTag.CheckAndAdd()
 			if !strings.HasPrefix(answer, "Что") {
 				database.DB.Model(u).Select("Flag", "FlagData").Updates(database.User{Flag: "", FlagData: ""})

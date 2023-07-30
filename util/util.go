@@ -5,9 +5,9 @@ import (
 	"github.com/koenigskraut/piktagbot/database"
 )
 
-// DocFromMedia safely unpacks tg.MessageMediaClass and additionally
-// returns true if it is a sticker (webp/tgs/webm)
-func DocFromMedia(media tg.MessageMediaClass) (*tg.Document, bool) {
+// StickerFromMedia safely unpacks tg.MessageMediaClass, returns true
+// if it is a sticker (webp/tgs/webm) and writes it into the database
+func StickerFromMedia(media tg.MessageMediaClass) (*database.Sticker, bool) {
 	if media == nil || media.TypeID() != tg.MessageMediaDocumentTypeID {
 		return nil, false
 	}
@@ -22,15 +22,16 @@ func DocFromMedia(media tg.MessageMediaClass) (*tg.Document, bool) {
 			break
 		}
 	}
-	// add sticker to database
+	// get or create sticker record
+	var s *database.Sticker
 	if isSticker {
-		st := database.Sticker{
+		s = &database.Sticker{
 			DocumentID:    document.ID,
 			AccessHash:    document.AccessHash,
 			FileReference: document.FileReference,
 		}
-		_ = st.Fetch()
+		_ = s.Fetch()
 
 	}
-	return document, isSticker
+	return s, isSticker
 }
