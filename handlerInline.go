@@ -13,12 +13,11 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 	return func(ctx context.Context, entities tg.Entities, update *tg.UpdateBotInlineQuery) error {
 		var as []inline.ResultOption
 		var q []*db.StickerTag
-		var u db.User
 
+		u := db.User{UserID: update.UserID}
 		if _, e := u.Get(); e != nil {
 			return e
 		}
-
 		checkUnique := make(map[int64]struct{})
 		if update.Query != "" {
 			q, _ = u.SearchStickers(update.Query)
