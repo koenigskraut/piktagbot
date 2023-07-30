@@ -6,6 +6,18 @@ import (
 
 const GlobalTagDefault = false
 
+// mysql> describe users;
+// +------------+--------------+------+-----+---------+----------------+
+// | Field      | Type         | Null | Key | Default | Extra          |
+// +------------+--------------+------+-----+---------+----------------+
+// | id         | int unsigned | NO   | PRI | NULL    | auto_increment |
+// | user_id    | bigint       | NO   |     | NULL    |                |
+// | global_tag | tinyint(1)   | YES  |     | NULL    |                |
+// | flag       | text         | YES  |     | NULL    |                |
+// | flag_data  | text         | YES  |     | NULL    |                |
+// | tag_order  | blob         | YES  |     | NULL    |                |
+// +------------+--------------+------+-----+---------+----------------+
+
 type User struct {
 	ID        uint `gorm:"primaryKey"`
 	UserID    int64

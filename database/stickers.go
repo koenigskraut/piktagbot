@@ -3,6 +3,17 @@ package database
 import "time"
 
 // TODO rework DB, add file context (although it works as is, it shouldn't) and make use of all of this
+// mysql> describe stickers;
+// +----------------+--------------+------+-----+-------------------+-------------------+
+// | Field          | Type         | Null | Key | Default           | Extra             |
+// +----------------+--------------+------+-----+-------------------+-------------------+
+// | id             | int unsigned | NO   | PRI | NULL              | auto_increment    |
+// | document_id    | bigint       | NO   |     | NULL              |                   |
+// | access_hash    | bigint       | NO   |     | NULL              |                   |
+// | file_reference | blob         | YES  |     | NULL              |                   |
+// | file_context   | text         | YES  |     | NULL              |                   |
+// | added          | datetime     | NO   |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
+// +----------------+--------------+------+-----+-------------------+-------------------+
 
 type Sticker struct {
 	ID            uint64 `gorm:"primaryKey"`

@@ -5,6 +5,19 @@ import (
 	"time"
 )
 
+// mysql> describe sticker_tags;
+// +-------------+--------------+------+-----+-------------------+-------------------+
+// | Field       | Type         | Null | Key | Default           | Extra             |
+// +-------------+--------------+------+-----+-------------------+-------------------+
+// | id          | int unsigned | NO   | PRI | NULL              | auto_increment    |
+// | user        | bigint       | NO   |     | NULL              |                   |
+// | sticker_id  | bigint       | NO   |     | NULL              |                   |
+// | document_id | bigint       | YES  |     | NULL              |                   |
+// | access_hash | bigint       | YES  |     | NULL              |                   |
+// | tag         | text         | YES  |     | NULL              |                   |
+// | added       | datetime     | NO   |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
+// +-------------+--------------+------+-----+-------------------+-------------------+
+
 type StickerTag struct {
 	ID         uint64 `gorm:"primaryKey"`
 	User       int64
