@@ -46,9 +46,9 @@ func preparePage(code int, docID uint64, page uint16) []byte {
 
 // BuildMarkup renders buttons for tag deletion for a given
 // sticker (docID) and user (userID), stopping on a given page
-func BuildMarkup(docID, userID int64, page uint16) (*tg.ReplyInlineMarkup, error) {
+func BuildMarkup(stickerID uint64, userID int64, page uint16) (*tg.ReplyInlineMarkup, error) {
 	// get tags for a given sticker
-	tags, err := (&database.StickerTag{User: userID, DocumentID: docID}).GetAllForUser()
+	tags, err := (&database.StickerTag{User: userID, StickerID: stickerID}).GetAllForUser()
 	//tags, err := getStickerTags(docID, userID)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func BuildMarkup(docID, userID int64, page uint16) (*tg.ReplyInlineMarkup, error
 	if tagLen < 11 {
 		markup.Rows = make([]tg.KeyboardButtonRow, tagLen)
 		for i := range tags {
-			b := prepareTagID(tags[i].ID, uint64(docID), 0)
+			b := prepareTagID(tags[i].ID, stickerID, 0)
 			button := &tg.KeyboardButtonCallback{Text: tags[i].Tag, Data: b}
 			markup.Rows[i] = tg.KeyboardButtonRow{Buttons: []tg.KeyboardButtonClass{button}}
 		}
@@ -84,24 +84,24 @@ func BuildMarkup(docID, userID int64, page uint16) (*tg.ReplyInlineMarkup, error
 		var first, backward, forward, last tg.KeyboardButtonClass
 
 		if page > 1 {
-			first = &tg.KeyboardButtonCallback{Text: "⏮", Data: preparePage(ActionBegin, uint64(docID), page)}
-			backward = &tg.KeyboardButtonCallback{Text: "⬅️", Data: preparePage(ActionBackward, uint64(docID), page)}
+			first = &tg.KeyboardButtonCallback{Text: "⏮", Data: preparePage(ActionBegin, stickerID, page)}
+			backward = &tg.KeyboardButtonCallback{Text: "⬅️", Data: preparePage(ActionBackward, stickerID, page)}
 		} else {
 			first = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
 			if page > 0 {
-				backward = &tg.KeyboardButtonCallback{Text: "⬅️", Data: preparePage(ActionBackward, uint64(docID), page)}
+				backward = &tg.KeyboardButtonCallback{Text: "⬅️", Data: preparePage(ActionBackward, stickerID, page)}
 			} else {
 				backward = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
 			}
 		}
 
 		if pages-int(page) > 1 {
-			last = &tg.KeyboardButtonCallback{Text: "⏭", Data: preparePage(ActionEnd, uint64(docID), page)}
-			forward = &tg.KeyboardButtonCallback{Text: "➡️", Data: preparePage(ActionForward, uint64(docID), page)}
+			last = &tg.KeyboardButtonCallback{Text: "⏭", Data: preparePage(ActionEnd, stickerID, page)}
+			forward = &tg.KeyboardButtonCallback{Text: "➡️", Data: preparePage(ActionForward, stickerID, page)}
 		} else {
 			last = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
 			if pages > int(page) {
-				forward = &tg.KeyboardButtonCallback{Text: "➡️", Data: preparePage(ActionForward, uint64(docID), page)}
+				forward = &tg.KeyboardButtonCallback{Text: "➡️", Data: preparePage(ActionForward, stickerID, page)}
 			} else {
 				forward = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
 			}
@@ -117,7 +117,7 @@ func BuildMarkup(docID, userID int64, page uint16) (*tg.ReplyInlineMarkup, error
 		markup.Rows[0] = tg.KeyboardButtonRow{Buttons: navButtons}
 		markup.Rows[len(relevantTags)+1] = tg.KeyboardButtonRow{Buttons: navButtons}
 		for i := 0; i < len(relevantTags); i++ {
-			b := prepareTagID(relevantTags[i].ID, uint64(docID), page)
+			b := prepareTagID(relevantTags[i].ID, stickerID, page)
 			button := &tg.KeyboardButtonCallback{Text: relevantTags[i].Tag, Data: b}
 			markup.Rows[i+1] = tg.KeyboardButtonRow{Buttons: []tg.KeyboardButtonClass{button}}
 		}

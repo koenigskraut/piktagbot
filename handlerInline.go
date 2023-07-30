@@ -18,22 +18,23 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		if _, e := u.Get(); e != nil {
 			return e
 		}
-		checkUnique := make(map[int64]struct{})
+		checkUnique := make(map[uint64]struct{})
 		if update.Query != "" {
 			q, _ = u.SearchStickers(update.Query)
 		} else {
 			q, _ = u.RecentStickers()
 		}
+		_ = q
 
 		for _, i := range q {
-			if _, ok := checkUnique[i.DocumentID]; !ok {
+			if _, ok := checkUnique[i.StickerID]; !ok {
 				as = append(as, inline.Sticker(
 					&tg.InputDocument{
-						ID:         i.DocumentID,
-						AccessHash: i.AccessHash,
+						ID:         i.Sticker.DocumentID,
+						AccessHash: i.Sticker.AccessHash,
 					}, inline.MediaAuto(""),
 				))
-				checkUnique[i.DocumentID] = struct{}{}
+				checkUnique[i.StickerID] = struct{}{}
 			}
 		}
 

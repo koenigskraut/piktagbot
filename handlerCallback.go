@@ -21,11 +21,11 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 		}
 
 		page := binary.LittleEndian.Uint16(update.Data[len(update.Data)-2:])
-		var docID int64
+		var stickerID uint64
 		if update.Data[0] == callback.ActionRemove {
-			docID = int64(binary.LittleEndian.Uint64(update.Data[9:17]))
+			stickerID = binary.LittleEndian.Uint64(update.Data[9:17])
 		} else {
-			docID = int64(binary.LittleEndian.Uint64(update.Data[1:9]))
+			stickerID = binary.LittleEndian.Uint64(update.Data[1:9])
 		}
 		userID := update.UserID
 		var markup *tg.ReplyInlineMarkup
@@ -37,7 +37,7 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 				message = "Что-то пошло не так!"
 			} else {
 				message = "Тег удалён!"
-				markup, err = callback.BuildMarkup(docID, userID, page)
+				markup, err = callback.BuildMarkup(stickerID, userID, page)
 				if err != nil {
 					if errors.Is(err, callback.MarkupError) {
 						message = "Тегов для этого стикера больше нет!"
@@ -56,14 +56,14 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 				}
 			}
 		case callback.ActionBegin:
-			markup, err = callback.BuildMarkup(docID, userID, 0)
+			markup, err = callback.BuildMarkup(stickerID, userID, 0)
 			if err != nil {
 				message = "Что-то пошло не так!"
 				err = answerCallback(ctx, update.QueryID, message, client)
 				return err
 			}
 		case callback.ActionEnd:
-			markup, err = callback.BuildMarkup(docID, userID, 65535)
+			markup, err = callback.BuildMarkup(stickerID, userID, 65535)
 			if err != nil {
 				message = "Что-то пошло не так!"
 				err = answerCallback(ctx, update.QueryID, message, client)
@@ -71,7 +71,7 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 			}
 		case callback.ActionBackward:
 			page--
-			markup, err = callback.BuildMarkup(docID, userID, page)
+			markup, err = callback.BuildMarkup(stickerID, userID, page)
 			if err != nil {
 				message = "Что-то пошло не так!"
 				err = answerCallback(ctx, update.QueryID, message, client)
@@ -79,7 +79,7 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 			}
 		case callback.ActionForward:
 			page++
-			markup, err = callback.BuildMarkup(docID, userID, page)
+			markup, err = callback.BuildMarkup(stickerID, userID, page)
 			if err != nil {
 				message = "Что-то пошло не так!"
 				err = answerCallback(ctx, update.QueryID, message, client)
