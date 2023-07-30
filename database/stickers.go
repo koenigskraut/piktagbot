@@ -40,18 +40,49 @@ func (s *Sticker) Fetch() error {
 	return nil
 }
 
+type ThumbnailSize string
+
+func (t ThumbnailSize) ToString() string {
+	return string(t)
+}
+
+const (
+	Box100px   ThumbnailSize = "s"
+	Box320px   ThumbnailSize = "m"
+	Box800px   ThumbnailSize = "x"
+	Box1280px  ThumbnailSize = "y"
+	Box2560px  ThumbnailSize = "w"
+	Crop160px  ThumbnailSize = "a"
+	Crop320px  ThumbnailSize = "b"
+	Crop640px  ThumbnailSize = "c"
+	Crop1280px ThumbnailSize = "d"
+
+	Strip   ThumbnailSize = "i"
+	Outline ThumbnailSize = "j"
+
+	NoThumbnail = ""
+)
+
 // Download downloads sticker file and returns it as bytes
-func (s *Sticker) Download(ctx context.Context, api *tg.Client) ([]byte, error) {
+func (s *Sticker) Download(ctx context.Context, api *tg.Client, thumbnailSize ThumbnailSize) ([]byte, error) {
+	// we're fine with raw api call since it's not likely we'll get
+	// over 512KB in size
 	upd, err := api.UploadGetFile(ctx, &tg.UploadGetFileRequest{
 		Location: &tg.InputDocumentFileLocation{
 			ID:            s.DocumentID,
 			AccessHash:    s.AccessHash,
 			FileReference: s.FileReference,
-			ThumbSize:     "x",
+			ThumbSize:     thumbnailSize.ToString(),
 		},
 		Limit: 512 * 1024,
 	})
-	return upd.(*tg.UploadFile).Bytes, err
+	if err != nil {
+		return nil, err
+	}
+	if uploadFile, ok := upd.(*tg.UploadFile); ok {
+		return uploadFile.Bytes, nil
+	}
+	return nil, err
 }
 
 //func (s *Sticker) Fetch() (stickerID uint64, err error) {
