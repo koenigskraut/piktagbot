@@ -1,6 +1,8 @@
 package database
 
 import (
+	"context"
+	"github.com/gotd/td/tg"
 	"time"
 )
 
@@ -38,19 +40,20 @@ func (s *Sticker) Fetch() error {
 	return nil
 }
 
-//func (s *Sticker) Download(ctx context.Context, api *tg.Client) ([]byte, error) {
-//	upd, err := api.UploadGetFile(ctx, &tg.UploadGetFileRequest{
-//		Location: &tg.InputDocumentFileLocation{
-//			ID:            s.DocumentID,
-//			AccessHash:    s.AccessHash,
-//			FileReference: s.FileReference,
-//			ThumbSize:     "m",
-//		},
-//		Limit: 512 * 1024,
-//	})
-//	return upd.(*tg.UploadFile).Bytes, err
-//}
-//
+// Download downloads sticker file and returns it as bytes
+func (s *Sticker) Download(ctx context.Context, api *tg.Client) ([]byte, error) {
+	upd, err := api.UploadGetFile(ctx, &tg.UploadGetFileRequest{
+		Location: &tg.InputDocumentFileLocation{
+			ID:            s.DocumentID,
+			AccessHash:    s.AccessHash,
+			FileReference: s.FileReference,
+			ThumbSize:     "x",
+		},
+		Limit: 512 * 1024,
+	})
+	return upd.(*tg.UploadFile).Bytes, err
+}
+
 //func (s *Sticker) Fetch() (stickerID uint64, err error) {
 //	var temp Sticker
 //	err = DB.Where(&Sticker{DocumentID: s.DocumentID}).First(&temp).Error
