@@ -12,21 +12,17 @@ import (
 // | id          | int unsigned | NO   | PRI | NULL              | auto_increment    |
 // | user        | bigint       | NO   |     | NULL              |                   |
 // | sticker_id  | bigint       | NO   |     | NULL              |                   |
-// | document_id | bigint       | YES  |     | NULL              |                   |
-// | access_hash | bigint       | YES  |     | NULL              |                   |
 // | tag         | text         | YES  |     | NULL              |                   |
 // | added       | datetime     | NO   |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
 // +-------------+--------------+------+-----+-------------------+-------------------+
 
 type StickerTag struct {
-	ID         uint64 `gorm:"primaryKey"`
-	User       int64
-	StickerID  uint64
-	Sticker    *Sticker
-	DocumentID int64
-	AccessHash int64
-	Tag        string
-	Added      time.Time `gorm:"->"` //`sql:"DEFAULT:CURRENT_TIMESTAMP"`
+	ID        uint64 `gorm:"primaryKey"`
+	User      int64
+	StickerID uint64
+	Sticker   *Sticker
+	Tag       string
+	Added     time.Time `gorm:"->"` //`sql:"DEFAULT:CURRENT_TIMESTAMP"`
 }
 
 func (st *StickerTag) GetAllForUser() (tags []*StickerTag, err error) {
@@ -36,8 +32,7 @@ func (st *StickerTag) GetAllForUser() (tags []*StickerTag, err error) {
 
 func (st *StickerTag) CheckAndAdd() (response string, err error) {
 	var temp StickerTag
-	// Access hash can theoretically change, so we can't use it for the search
-	err = DB.Where(&StickerTag{User: st.User, DocumentID: st.DocumentID, Tag: st.Tag}).First(&temp).Error
+	err = DB.Where(&StickerTag{User: st.User, StickerID: st.StickerID, Tag: st.Tag}).First(&temp).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return "Что-то пошло не так!", err
 	}

@@ -17,11 +17,9 @@ func Add(m *tg.Message, u *database.User) string {
 			// if there is a sticker, check if there is such a tag attached to it,
 			// if not — add one
 			sTag := database.StickerTag{
-				User:       u.UserID,
-				StickerID:  sticker.ID,
-				DocumentID: sticker.DocumentID,
-				AccessHash: sticker.AccessHash,
-				Tag:        u.FlagData,
+				User:      u.UserID,
+				StickerID: sticker.ID,
+				Tag:       u.FlagData,
 			}
 			answer, _ := sTag.CheckAndAdd()
 			if !strings.HasPrefix(answer, "Что") {

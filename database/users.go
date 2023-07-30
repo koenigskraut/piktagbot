@@ -110,7 +110,9 @@ func (u *User) RecentStickers() (found []*StickerTag, err error) {
 }
 
 func (u *User) SearchStickers(prefix string) (found []*StickerTag, err error) {
-	query := DB.Order("added desc").Where("tag LIKE ?", prefix+"%")
+	query := DB.Preload("Sticker").
+		Order("added desc").
+		Where("tag LIKE ?", prefix+"%")
 	if u.GlobalTag {
 		query = query.Where("user IN (?, 0)", u.UserID)
 	} else {

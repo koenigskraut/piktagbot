@@ -33,11 +33,9 @@ func Tag(ctx context.Context, answer *message.RequestBuilder, m *tg.Message, cli
 		if sticker, ok := util.StickerFromMedia(media); ok {
 			// if true, check if it has such a tag, add one if not
 			sTag := database.StickerTag{
-				User:       userID,
-				StickerID:  sticker.ID,
-				DocumentID: sticker.DocumentID,
-				AccessHash: sticker.AccessHash,
-				Tag:        text,
+				User:      userID,
+				StickerID: sticker.ID,
+				Tag:       text,
 			}
 			resp, _ := sTag.CheckAndAdd()
 			_, err := answer.Text(ctx, resp)
