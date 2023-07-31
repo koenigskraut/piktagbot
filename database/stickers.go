@@ -16,8 +16,17 @@ import (
 // | access_hash    | bigint       | NO   |     | NULL              |                   |
 // | file_reference | blob         | YES  |     | NULL              |                   |
 // | file_context   | text         | YES  |     | NULL              |                   |
+// | type           | tinyint(1)   | NO   |     | NULL              |                   |
 // | added          | datetime     | NO   |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
 // +----------------+--------------+------+-----+-------------------+-------------------+
+
+type MimeType uint8
+
+const (
+	MimeTypeWebp = iota
+	MimeTypeTgs
+	MimeTypeWebm
+)
 
 type Sticker struct {
 	ID            uint64 `gorm:"primaryKey"`
@@ -25,6 +34,7 @@ type Sticker struct {
 	AccessHash    int64
 	FileReference []byte
 	FileContext   string
+	Type          MimeType
 	Added         time.Time `gorm:"->"`
 }
 
