@@ -42,7 +42,7 @@ type Sticker struct {
 // and FileReference
 func (s *Sticker) Fetch() error {
 	err := DB.Where(&Sticker{DocumentID: s.DocumentID}).
-		Attrs(&Sticker{AccessHash: s.AccessHash, FileReference: s.FileReference}).
+		Attrs(&Sticker{AccessHash: s.AccessHash, FileReference: s.FileReference, Type: s.Type}).
 		FirstOrCreate(s).Error
 	if err != nil {
 		return err

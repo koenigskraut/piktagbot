@@ -22,16 +22,28 @@ func StickerFromMedia(media tg.MessageMediaClass) (*database.Sticker, bool) {
 			break
 		}
 	}
-	// get or create sticker record
-	var s *database.Sticker
-	if isSticker {
-		s = &database.Sticker{
-			DocumentID:    document.ID,
-			AccessHash:    document.AccessHash,
-			FileReference: document.FileReference,
-		}
-		_ = s.Fetch()
 
+	if !isSticker {
+		return nil, false
 	}
-	return s, isSticker
+
+	var s *database.Sticker
+	s = &database.Sticker{
+		DocumentID:    document.ID,
+		AccessHash:    document.AccessHash,
+		FileReference: document.FileReference,
+	}
+	switch document.MimeType {
+	case "image/webp":
+		s.Type = database.MimeTypeWebp
+	case "application/x-tgsticker":
+		s.Type = database.MimeTypeTgs
+	case "video/webm":
+		s.Type = database.MimeTypeWebm
+	default:
+		return nil, false
+	}
+	_ = s.Fetch()
+
+	return s, true
 }
