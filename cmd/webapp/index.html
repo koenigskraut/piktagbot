@@ -4,7 +4,84 @@
     <meta charset="utf-8">
     <title>Sticker Tagger App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
+
+        h1 {
+            color: var(--tg-theme-text-color, black);
+            user-select: none;
+            pointer-events: none;
+            -moz-user-select: none;
+            /*-webkit-user-drag: none;*/
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            font-family: system-ui;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--tg-theme-bg-color, white);
+        }
+
+        div {
+            background-color: rgba(255, 255, 255, 0) !important;
+        }
+
+        .grid-square {
+            width: 17vw;
+            height: 17vw;
+            display: inline-block;
+            margin: 1vw;
+        }
+
+        .sortable-ghost {
+            opacity: 0 !important;
+        }
+
+        .sortable-drag {
+            opacity: 100% !important;
+        }
+
+        .sortable-chosen img {
+            transform: scale(1.2);
+        }
+
+        .sortable-fallback img {
+            transform: scale(1.2);
+        }
+
+        .sortable-unchosen {
+            transform: scale(0.9);
+        }
+
+        img {
+            transition: transform 150ms ease;
+            -webkit-transition: transform 150ms ease;
+            -o-transition: transform 150ms ease;
+            height: 100%;
+            width: 100%;
+            object-fit: contain;
+            /*user-drag: none;*/
+            user-select: none;
+            pointer-events: none;
+            -moz-user-select: none;
+            /*-webkit-user-drag: none;*/
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            /*z-index: 5;*/
+        }
+
+        .container {
+            margin: 0 !important;
+            max-width: 100%;
+            width: 100%;
+            padding: 0;
+            display: inline-flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+            justify-content: center;
+        }
+
         #overlay {
             position: fixed;
             display: block;
@@ -39,9 +116,80 @@
     <script>
         const wsPath = "{{ .WSPath }}";
         let webApp = Telegram.WebApp;
+        let container = null;
+        let stickerNumber = 0;
+        webApp.MainButton.text = "Сохранить";
+
+        function registerContainer() {
+            container = document.getElementById("gridDemo");
+            container.onpointerdown = (function (onchange) {
+                return function (evt) {
+                    evt = evt || event;
+                    if (navigator.userAgent.toLowerCase().includes("android")) {
+                        let elem = document.elementFromPoint(evt.clientX, evt.clientY);
+                        Object.defineProperty(evt, 'target', {writable: false, value: elem});
+                        Object.defineProperty(evt, 'explicitOriginalTarget', {writable: false, value: elem});
+                        Object.defineProperty(evt, 'originalTarget', {writable: false, value: elem});
+                        Object.defineProperty(evt, 'srcElement', {writable: false, value: elem});
+                    }
+
+                    if (onpointerdown) {
+                        onpointerdown(evt);
+                    }
+                }
+            })(container.onpointerdown);
+            Sortable.create(container, {
+                animation: 150,
+                easing: "ease",
+                delay: 300,
+                delayOnTouchOnly: true,
+                touchStartThreshold: 100,
+                forceFallback: true,
+                filter: ".ignore-elements",
+                ghostClass: "sortable-ghost",
+                chosenClass: "sortable-chosen",
+                dragClass: "sortable-drag",
+
+                onChoose: function (evt) {
+                    const images = document.querySelectorAll(".square-img");
+                    for (let image of images) {
+                        if (image !== evt.item.firstChild) {
+                            image.classList.add("sortable-unchosen");
+                        }
+                    }
+                },
+
+                onStart: function (evt) {
+                    let item = document.getElementsByClassName("sortable-fallback")[0];
+                    item.classList.remove("sortable-chosen");
+                },
+
+                onUnchoose: function (evt) {
+                    const images = document.querySelectorAll(".square-img");
+                    for (let image of images) {
+                        if (image.parentNode !== evt.item) {
+                            image.classList.remove("sortable-unchosen");
+                        } else {
+                            console.log(evt.item);
+                        }
+                    }
+                },
+
+                onEnd: function (evt) {
+                    let itemEl = evt.item;  // dragged HTMLElement
+                    if (evt.newIndex > stickerNumber-1) {
+                        container.insertBefore(itemEl, container.children[stickerNumber-1]);
+                    }
+                    if (evt.oldIndex !== evt.newIndex)
+                        webApp.MainButton.show();
+                },
+            });
+        }
+
         async function foo() {
-            console.log("foo called");
+            window.Telegram.WebApp.ready();
             const overlay = document.getElementById("overlay");
+            registerContainer();
             fetch("/hash", {
                 method: "POST",
                 body: webApp.initData
@@ -60,26 +208,37 @@
                     console.log("TO SERVER: \"" + JSON.stringify(resp) + "\"");
                 };
                 socket.onerror = (ev) => console.error(ev);
-                let i = 1;
                 socket.onmessage = (ev) => {
-                    console.log("FROM SERVER: \"" + ev.data + "\"");
-                    let elem = document.createElement('img');
-                    elem.src = "/stickers/" + ev.data;
-                    document.body.appendChild(elem);
-                    i++;
+                    let elem = document.createElement("div");
+                    elem.className = "grid-square";
+                    elem.id = "elem" + String(stickerNumber+1);
+                    let elemChild = document.createElement("img");
+                    elemChild.className = "square-img";
+                    elemChild.src = "/stickers/" + ev.data;
+                    elem.appendChild(elemChild);
+                    container.appendChild(elem)
+                    stickerNumber++;
                 };
                 socket.onclose = () => {
                     console.log("socket closed");
+                    for (let j = stickerNumber; j < Math.ceil(stickerNumber / 5) * 5; j++) {
+                        let elem = document.createElement('div');
+                        elem.className = 'grid-square';
+                        elem.classList.add('ignore-elements');
+                        container.appendChild(elem)
+                    }
                     overlay.style.display = "none";
                 };
             });
         }
 
         window.onload = foo;
+
     </script>
 </head>
 
 <body>
+    <h1>Hello everynyan</h1>
 
     <div id="overlay">
         <svg id="spinner" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background: rgba(0, 0, 0, 0); display: block; shape-rendering: auto;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
@@ -88,6 +247,7 @@
         </svg>
     </div>
 
-    <h1>Hello everynyan</h1>
+    <div class="container" id="gridDemo"></div>
+
 </body>
 </html>
