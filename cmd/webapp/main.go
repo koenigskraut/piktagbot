@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
+	db "github.com/koenigskraut/piktagbot/database"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 )
 
 const (
@@ -29,9 +33,20 @@ var (
 	botToken    = os.Getenv("BOT_TOKEN")
 )
 
+func init() {
+	downloaded.init(stickerPath)
+}
+
 func main() {
 	address := fmt.Sprintf(":%s", appPort)
 	wsPath := fmt.Sprintf("wss://%s:%s%s", domain, appPort, WebAppWsPath)
+
+	db.InitializeDB()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	go initializeTelegram(ctx)
 
 	http.HandleFunc(WebAppRoot, func(w http.ResponseWriter, r *http.Request) {
 		err := indexTemplate.Execute(w, struct {
@@ -45,7 +60,13 @@ func main() {
 	http.HandleFunc(WebAppWsPath, handleWS)
 	http.Handle(WebAppStickersPath, http.StripPrefix(WebAppStickersPath, http.FileServer(http.Dir(stickerPath))))
 
-	if err := http.ListenAndServeTLS(address, certFile, keyFile, nil); err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		err := http.ListenAndServeTLS(address, certFile, keyFile, nil)
+		_, _ = fmt.Fprintf(os.Stderr, "%+v\n", err)
+		os.Exit(2)
+	}()
+	<-ctx.Done()
+
+	// hacky way to wait until telegram in goroutine reports closing
+	time.Sleep(100 * time.Millisecond)
 }

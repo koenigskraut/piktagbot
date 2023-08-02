@@ -56,16 +56,15 @@
                 let socket = new WebSocket(wsPath);
                 socket.onopen = () => {
                     console.log("socket opened");
-                    const secret = "secret_data";
-                    socket.send(secret);
-                    console.log("TO SERVER: \"" + secret + "\"");
+                    socket.send(JSON.stringify(resp));
+                    console.log("TO SERVER: \"" + JSON.stringify(resp) + "\"");
                 };
                 socket.onerror = (ev) => console.error(ev);
                 let i = 1;
                 socket.onmessage = (ev) => {
                     console.log("FROM SERVER: \"" + ev.data + "\"");
-                    let elem = document.createElement('p');
-                    elem.textContent = i + ". " + ev.data;
+                    let elem = document.createElement('img');
+                    elem.src = "/stickers/" + ev.data;
                     document.body.appendChild(elem);
                     i++;
                 };

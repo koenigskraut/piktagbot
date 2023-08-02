@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/gotd/td/tg"
+	db "github.com/koenigskraut/piktagbot/database"
 	"log"
 	"net/http"
-	"time"
 )
 
 func handleWS(writer http.ResponseWriter, request *http.Request) {
@@ -23,11 +25,44 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		fmt.Printf("FROM CLIENT: %s\n", data)
-		for _, r := range []string{"a", "b", "c", "d"} {
+
+		var sessionUser SessionUser
+		if err := json.Unmarshal(data, &sessionUser); err != nil {
+			log.Println(err)
+			return
+		}
+		dbUser := db.User{UserID: sessionUser.UserID}
+		if _, err := dbUser.Get(); err != nil {
+			log.Println(err)
+			return
+		}
+		recentStickers, _ := dbUser.RecentStickers()
+		locations := make([]*tg.InputDocumentFileLocation, 0, len(recentStickers))
+		for _, r := range recentStickers {
+			// TODO handle other sticker types
+			if r.Sticker.Type != db.MimeTypeWebp {
+				continue
+			}
+			locations = append(locations, &tg.InputDocumentFileLocation{
+				ID:            r.Sticker.DocumentID,
+				AccessHash:    r.Sticker.AccessHash,
+				FileReference: r.Sticker.FileReference,
+			})
+		}
+		fmt.Println(locations)
+
+		myChan := make(chan string)
+		myFiles := receiveFiles{
+			files: locations,
+			ch:    myChan,
+		}
+		downloadChan <- &myFiles
+		fmt.Println("sent")
+		for r := range myChan {
+			fmt.Println(r)
 			if err := wsutil.WriteServerText(conn, []byte(r)); err != nil {
 				log.Println(3, err)
 			}
-			time.Sleep(time.Second)
 		}
 	}()
 }
