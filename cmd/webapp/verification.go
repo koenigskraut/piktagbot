@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +14,21 @@ import (
 	"sort"
 	"strings"
 )
+
+type TelegramUser struct {
+	ID              int64  `json:"id"`
+	Username        string `json:"username"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	IsPremium       bool   `json:"is_premium"`
+	LanguageCode    string `json:"language_code"`
+	AllowsWriteToPM bool   `json:"allows_write_to_pm"`
+}
+
+type SessionUser struct {
+	UserID    int64  `json:"user_id"`
+	SessionID uint64 `json:"session_id"`
+}
 
 func handleVerification(token string) func(writer http.ResponseWriter, request *http.Request) {
 
@@ -39,7 +56,15 @@ func handleVerification(token string) func(writer http.ResponseWriter, request *
 			return
 		}
 
-		_, err = writer.Write([]byte(user))
+		// TODO add sessions
+		toReturn, err := json.Marshal(SessionUser{UserID: user.ID, SessionID: 123})
+		if err != nil {
+			http.Error(writer, "server error", http.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+
+		_, err = writer.Write(toReturn)
 		if err != nil {
 			log.Println(err)
 			return
@@ -47,7 +72,7 @@ func handleVerification(token string) func(writer http.ResponseWriter, request *
 	}
 }
 
-func processInitData(data, secretKey []byte) (user string, ok bool, err error) {
+func processInitData(data, secretKey []byte) (user *TelegramUser, ok bool, err error) {
 	fields := strings.Split(string(data), "&")
 	fieldsToHash := make([]string, 0, len(fields)-1)
 
@@ -62,7 +87,10 @@ func processInitData(data, secretKey []byte) (user string, ok bool, err error) {
 			if err != nil {
 				return
 			}
-			user = field[5:]
+			user, err = processUserData(field[5:])
+			if err != nil {
+				return
+			}
 			fallthrough
 		default:
 			fieldsToHash = append(fieldsToHash, field)
@@ -80,4 +108,13 @@ func processInitData(data, secretKey []byte) (user string, ok bool, err error) {
 	ok = hash == hex.EncodeToString(hm.Sum(nil))
 
 	return
+}
+
+func processUserData(user string) (*TelegramUser, error) {
+	buffer := bytes.NewBufferString(user)
+	var tu TelegramUser
+	if err := json.NewDecoder(buffer).Decode(&tu); err != nil {
+		return nil, err
+	}
+	return &tu, nil
 }
