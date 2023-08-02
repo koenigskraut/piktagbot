@@ -1,7 +1,6 @@
 package database
 
 import (
-	"github.com/koenigskraut/piktagbot/util"
 	"gorm.io/gorm"
 )
 
@@ -79,7 +78,7 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 		return nil, err
 	}
 
-	return util.StickerTagsUnique(pre), nil
+	return StickerTagsUnique(pre), nil
 
 	// TODO order stuff
 	//var order []uint64
@@ -110,7 +109,6 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 	//	}
 	//}
 
-	return
 }
 
 func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
@@ -127,5 +125,5 @@ func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 		return nil, err
 	}
 
-	return util.StickerTagsUnique(pre), nil
+	return StickerTagsUnique(pre), nil
 }
