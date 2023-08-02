@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	WebAppRoot = "/"
+	WebAppRoot     = "/"
+	WebAppHashPath = "/hash"
 )
 
 //go:embed index.html
@@ -19,11 +20,14 @@ func main() {
 	certFile := os.Getenv("CERT_FILE")
 	keyFile := os.Getenv("KEY_FILE")
 	address := fmt.Sprintf(":%s", os.Getenv("APP_PORT"))
+
 	http.HandleFunc(WebAppRoot, func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write(htmlPage); err != nil {
 			log.Println(err)
 		}
 	})
+	http.HandleFunc(WebAppHashPath, handleVerification(os.Getenv("BOT_TOKEN")))
+
 	if err := http.ListenAndServeTLS(address, certFile, keyFile, nil); err != nil {
 		log.Fatal(err)
 	}

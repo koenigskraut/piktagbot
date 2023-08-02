@@ -4,6 +4,25 @@
     <meta charset="utf-8">
     <title>Sticker Tagger App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        let webApp = Telegram.WebApp;
+        async function foo() {
+            console.log("foo called");
+            fetch("/hash", {
+                method: "POST",
+                body: webApp.initData
+            }).then(async res => {
+                if (!res.ok) {
+                    console.error(await res.text());
+                    return;
+                }
+                let resp = await res.json();
+                console.log(resp);
+            });
+        }
+
+        window.onload = foo;
+    </script>
 </head>
 
 <body>
