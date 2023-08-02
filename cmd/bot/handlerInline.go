@@ -11,14 +11,12 @@ import (
 func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.UpdateBotInlineQuery) error {
 	sender := message.NewSender(client)
 	return func(ctx context.Context, entities tg.Entities, update *tg.UpdateBotInlineQuery) error {
-		var as []inline.ResultOption
 		var q []*db.StickerTag
 
 		u := db.User{UserID: update.UserID}
 		if _, e := u.Get(); e != nil {
 			return e
 		}
-		checkUnique := make(map[uint64]struct{})
 		if update.Query != "" {
 			q, _ = u.SearchStickers(update.Query)
 		} else {
@@ -26,16 +24,14 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		}
 		_ = q
 
-		for _, i := range q {
-			if _, ok := checkUnique[i.StickerID]; !ok {
-				as = append(as, inline.Sticker(
-					&tg.InputDocument{
-						ID:         i.Sticker.DocumentID,
-						AccessHash: i.Sticker.AccessHash,
-					}, inline.MediaAuto(""),
-				))
-				checkUnique[i.StickerID] = struct{}{}
-			}
+		as := make([]inline.ResultOption, len(q))
+		for i, st := range q {
+			as[i] = inline.Sticker(
+				&tg.InputDocument{
+					ID:         st.Sticker.DocumentID,
+					AccessHash: st.Sticker.AccessHash,
+				}, inline.MediaAuto(""),
+			)
 		}
 
 		w := sender.Inline(update).CacheTimeSeconds(0).NextOffset("").Gallery(true)

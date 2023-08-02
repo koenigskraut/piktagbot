@@ -47,3 +47,15 @@ func StickerFromMedia(media tg.MessageMediaClass) (*database.Sticker, bool) {
 
 	return s, true
 }
+
+func StickerTagsUnique(in []*database.StickerTag) (out []*database.StickerTag) {
+	out = make([]*database.StickerTag, 0, len(in))
+	checkUnique := make(map[uint64]bool)
+	for _, st := range in {
+		if checkUnique[st.StickerID] {
+			out = append(out, st)
+			checkUnique[st.StickerID] = true
+		}
+	}
+	return
+}

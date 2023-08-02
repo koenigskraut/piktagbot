@@ -1,6 +1,7 @@
 package database
 
 import (
+	"github.com/koenigskraut/piktagbot/util"
 	"gorm.io/gorm"
 )
 
@@ -68,14 +69,17 @@ func (u *User) SetFlag(flag, flagData string) (err error) {
 //	return
 //}
 
-func (u *User) RecentStickers() (found []*StickerTag, err error) {
-	err = DB.Preload("Sticker").
+func (u *User) RecentStickers() ([]*StickerTag, error) {
+	var pre []*StickerTag
+	err := DB.Preload("Sticker").
 		Where(&StickerTag{User: u.UserID}).
 		Order("added desc").
-		Find(&found).Error
+		Find(&pre).Error
 	if err != nil {
 		return nil, err
 	}
+
+	return util.StickerTagsUnique(pre), nil
 
 	// TODO order stuff
 	//var order []uint64
@@ -118,9 +122,10 @@ func (u *User) SearchStickers(prefix string) (found []*StickerTag, err error) {
 	} else {
 		query = query.Where(&StickerTag{User: u.UserID})
 	}
-	err = query.Find(&found).Error
-	if err != nil {
+	var pre []*StickerTag
+	if err := query.Find(&pre).Error; err != nil {
 		return nil, err
 	}
-	return
+
+	return util.StickerTagsUnique(pre), nil
 }
