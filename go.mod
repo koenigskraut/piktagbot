@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/gobwas/ws v1.0.2
 	github.com/gotd/td v0.84.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.11.0
@@ -16,11 +17,14 @@ require (
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-faster/jx v1.0.1 // indirect
 	github.com/go-faster/xor v1.0.0 // indirect
+	github.com/gobwas/httphead v0.0.0-20180130184737-2c6c146eadee // indirect
+	github.com/gobwas/pool v0.2.0 // indirect
 	github.com/gotd/ige v0.2.2 // indirect
 	github.com/gotd/neo v0.1.5 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
