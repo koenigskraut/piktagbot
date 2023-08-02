@@ -113,7 +113,7 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 	return
 }
 
-func (u *User) SearchStickers(prefix string) (found []*StickerTag, err error) {
+func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 	query := DB.Preload("Sticker").
 		Order("added desc").
 		Where("tag LIKE ?", prefix+"%")
