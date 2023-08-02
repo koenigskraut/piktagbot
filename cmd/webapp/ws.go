@@ -6,6 +6,7 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 func handleWS(writer http.ResponseWriter, request *http.Request) {
@@ -22,8 +23,11 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		fmt.Printf("FROM CLIENT: %s\n", data)
-		if err := wsutil.WriteServerText(conn, data); err != nil {
-			log.Println(3, err)
+		for _, r := range []string{"a", "b", "c", "d"} {
+			if err := wsutil.WriteServerText(conn, []byte(r)); err != nil {
+				log.Println(3, err)
+			}
+			time.Sleep(time.Second)
 		}
 	}()
 }

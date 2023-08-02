@@ -4,11 +4,44 @@
     <meta charset="utf-8">
     <title>Sticker Tagger App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        #overlay {
+            position: fixed;
+            display: block;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.4);
+            z-index: 2;
+        }
+
+        #spinner {
+            position: absolute;
+            top: 40%;
+            left: 40%;
+            margin: auto;
+            width: 20%;
+            animation: 1s linear infinite spin;
+        }
+
+        @keyframes spin {
+            from {
+                transform:rotate(0deg);
+            }
+            to {
+                transform:rotate(360deg);
+            }
+        }
+    </style>
     <script>
         const wsPath = "{{ .WSPath }}";
         let webApp = Telegram.WebApp;
         async function foo() {
             console.log("foo called");
+            const overlay = document.getElementById("overlay");
             fetch("/hash", {
                 method: "POST",
                 body: webApp.initData
@@ -28,8 +61,18 @@
                     console.log("TO SERVER: \"" + secret + "\"");
                 };
                 socket.onerror = (ev) => console.error(ev);
-                socket.onmessage = (ev) => console.log("FROM SERVER: \"" + ev.data + "\"");
-                socket.onclose = () => console.log("socket closed");
+                let i = 1;
+                socket.onmessage = (ev) => {
+                    console.log("FROM SERVER: \"" + ev.data + "\"");
+                    let elem = document.createElement('p');
+                    elem.textContent = i + ". " + ev.data;
+                    document.body.appendChild(elem);
+                    i++;
+                };
+                socket.onclose = () => {
+                    console.log("socket closed");
+                    overlay.style.display = "none";
+                };
             });
         }
 
@@ -38,6 +81,14 @@
 </head>
 
 <body>
+
+    <div id="overlay">
+        <svg id="spinner" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background: rgba(0, 0, 0, 0); display: block; shape-rendering: auto;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+            <circle cx="50" cy="50" fill="none" stroke="#2aabee" stroke-width="10" r="35" stroke-dasharray="164.93361431346415 56.97787143782138">
+            </circle>
+        </svg>
+    </div>
+
     <h1>Hello everynyan</h1>
 </body>
 </html>
