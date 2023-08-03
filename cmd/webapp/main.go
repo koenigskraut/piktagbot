@@ -56,7 +56,7 @@ func main() {
 			log.Println(err)
 		}
 	})
-	http.HandleFunc(WebAppHashPath, handleVerification(botToken))
+	http.HandleFunc(WebAppHashPath, handleVerification)
 	http.HandleFunc(WebAppWsPath, handleWS)
 	http.Handle(WebAppStickersPath, http.StripPrefix(WebAppStickersPath, http.FileServer(http.Dir(stickerPath))))
 
