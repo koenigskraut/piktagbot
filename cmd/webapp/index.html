@@ -7,7 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
 
-        h1 {
+        h2 {
+            margin: 0 2vw;
             color: var(--tg-theme-text-color, black);
             user-select: none;
             pointer-events: none;
@@ -15,7 +16,9 @@
             /*-webkit-user-drag: none;*/
             -webkit-user-select: none;
             -ms-user-select: none;
+            text-align: center;
             font-family: system-ui;
+            font-weight: lighter;
         }
 
         body {
@@ -24,7 +27,7 @@
         }
 
         div {
-            background-color: rgba(255, 255, 255, 0) !important;
+            /*background-color: rgba(255, 255, 255, 0) !important;*/
         }
 
         .grid-square {
@@ -91,7 +94,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(255, 255, 255, 0.4);
+            background-color: rgba(0, 0, 0, 0.3);
             z-index: 2;
         }
 
@@ -112,6 +115,43 @@
                 transform:rotate(360deg);
             }
         }
+
+        div#new-entry-container {
+            display: flex;
+            flex-direction: column;
+            height: 15vw;
+        }
+
+        div.new-entry-row {
+            display: flex;
+            flex-direction: row;
+        }
+        div.centered {
+            margin: auto;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        h3 {
+            color: var(--tg-theme-text-color, black);
+            user-select: none;
+            pointer-events: none;
+            -moz-user-select: none;
+            /*-webkit-user-drag: none;*/
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            width: 100%;
+            font-family: system-ui;
+            font-weight: lighter;
+            font-size: 14pt;
+            position: relative;
+            top: 2pt;
+            margin: 0;
+        }
+        circle#radio-circle {
+            transition: all 0.2s;
+        }
     </style>
     <script>
         const wsPath = "{{ .WSPath }}";
@@ -122,7 +162,7 @@
 
         function registerContainer() {
             container = document.getElementById("gridDemo");
-            container.onpointerdown = (function (onchange) {
+            container.onpointerdown = (function (_) {
                 return function (evt) {
                     evt = evt || event;
                     if (navigator.userAgent.toLowerCase().includes("android")) {
@@ -159,7 +199,7 @@
                     }
                 },
 
-                onStart: function (evt) {
+                onStart: function (_) {
                     let item = document.getElementsByClassName("sortable-fallback")[0];
                     item.classList.remove("sortable-chosen");
                 },
@@ -188,9 +228,22 @@
             });
         }
 
+        function registerRadio() {
+            const button = document.getElementById("radio-svg");
+            const circle = document.getElementById("radio-circle");
+            button.addEventListener("click", function (){
+                if (circle.style.transform === "translateX(44%)") {
+                    circle.style.transform = "translateX(0%)";
+                } else {
+                    circle.style.transform = "translateX(44%)";
+                }
+            });
+        }
+
         async function foo() {
             window.Telegram.WebApp.ready();
             const overlay = document.getElementById("overlay");
+            registerRadio();
             registerContainer();
             const searchString = window.location.search.substring(1);
             const requestBody = searchString ? searchString : webApp.initData;
@@ -242,11 +295,31 @@
 </head>
 
 <body>
-    <h1>Hello everynyan</h1>
+    <h2 id="info-header">Перетаскивайте стикеры, чтобы поменять их порядок</h2>
+
+    <div id="new-entry-container">
+        <div class="new-entry-row centered" id="new-entry-header" style="background-color: rgba(255, 0, 0, 0);">
+            <h3 style="text-align: center;">Новые стикеры будут добавляться</h3>
+        </div>
+        <div class="new-entry-row centered" id="new-entry-choose" style="background-color: rgba(0, 255, 0, 0);">
+            <div class="new-entry-select centered" style="background-color: rgba(255, 0, 0, 0);" >
+                <h3 style="text-align: right;">в начало</h3>
+            </div>
+            <div class="new-entry-select centered" style="background-color: rgba(0, 255, 0, 0); width: 45%" >
+                <svg id="radio-svg" width="60%" height="100%" viewBox="0 0 95 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="84" height="42" rx="20" fill="var(--tg-theme-button-color,#40A7E3)"/>
+                    <circle id="radio-circle" cx="27" cy="27" r="24" fill="var(--tg-theme-bg-color,#FFFFFF)" stroke="var(--tg-theme-button-color,#40A7E3)" stroke-width="6"/>
+                </svg>
+            </div>
+            <div class="new-entry-select centered" style="background-color: rgba(0, 0, 255, 0);" >
+                <h3 style="text-align: left;">в конец</h3>
+            </div>
+        </div>
+    </div>
 
     <div id="overlay">
         <svg id="spinner" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background: rgba(0, 0, 0, 0); display: block; shape-rendering: auto;" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
-            <circle cx="50" cy="50" fill="none" stroke="#2aabee" stroke-width="10" r="35" stroke-dasharray="164.93361431346415 56.97787143782138">
+            <circle cx="50" cy="50" fill="none" stroke="var(--tg-theme-button-color,#40A7E3)" stroke-width="10" r="35" stroke-dasharray="164.93361431346415 56.97787143782138">
             </circle>
         </svg>
     </div>
