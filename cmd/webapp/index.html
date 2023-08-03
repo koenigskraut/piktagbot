@@ -7,8 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <style>
 
-        h2 {
-            margin: 0 2vw;
+        .text {
             color: var(--tg-theme-text-color, black);
             user-select: none;
             pointer-events: none;
@@ -16,9 +15,19 @@
             /*-webkit-user-drag: none;*/
             -webkit-user-select: none;
             -ms-user-select: none;
-            text-align: center;
             font-family: system-ui;
             font-weight: lighter;
+        }
+
+        h2 {
+            margin: 0 2vw;
+            text-align: center;
+        }
+        h3 {
+            width: 100%;
+            position: relative;
+            top: 2pt;
+            margin: 0;
         }
 
         body {
@@ -132,22 +141,6 @@
             width: 100%;
             display: flex;
             justify-content: center;
-        }
-        h3 {
-            color: var(--tg-theme-text-color, black);
-            user-select: none;
-            pointer-events: none;
-            -moz-user-select: none;
-            /*-webkit-user-drag: none;*/
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            width: 100%;
-            font-family: system-ui;
-            font-weight: lighter;
-            font-size: 14pt;
-            position: relative;
-            top: 2pt;
-            margin: 0;
         }
         circle#radio-circle {
             transition: all 0.2s;
@@ -295,15 +288,15 @@
 </head>
 
 <body>
-    <h2 id="info-header">Перетаскивайте стикеры, чтобы поменять их порядок</h2>
+    <h2 class="text" id="info-header">Перетаскивайте стикеры, чтобы поменять их порядок</h2>
 
     <div id="new-entry-container">
         <div class="new-entry-row centered" id="new-entry-header" style="background-color: rgba(255, 0, 0, 0);">
-            <h3 style="text-align: center;">Новые стикеры будут добавляться</h3>
+            <h3 class="text" style="text-align: center;">Новые стикеры будут добавляться</h3>
         </div>
         <div class="new-entry-row centered" id="new-entry-choose" style="background-color: rgba(0, 255, 0, 0);">
             <div class="new-entry-select centered" style="background-color: rgba(255, 0, 0, 0);" >
-                <h3 style="text-align: right;">в начало</h3>
+                <h3 class="text" style="text-align: right;">в начало</h3>
             </div>
             <div class="new-entry-select centered" style="background-color: rgba(0, 255, 0, 0); width: 45%" >
                 <svg id="radio-svg" width="60%" height="100%" viewBox="0 0 95 54" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -312,7 +305,7 @@
                 </svg>
             </div>
             <div class="new-entry-select centered" style="background-color: rgba(0, 0, 255, 0);" >
-                <h3 style="text-align: left;">в конец</h3>
+                <h3 class="text" style="text-align: left;">в конец</h3>
             </div>
         </div>
     </div>
