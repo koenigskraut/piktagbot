@@ -94,17 +94,3 @@ func (s *Sticker) Download(ctx context.Context, api *tg.Client, thumbnailSize Th
 	}
 	return nil, err
 }
-
-//func (s *Sticker) Fetch() (stickerID uint64, err error) {
-//	var temp Sticker
-//	err = DB.Where(&Sticker{DocumentID: s.DocumentID}).First(&temp).Error
-//	if err != nil && err != gorm.ErrRecordNotFound {
-//		return 0, err
-//	}
-//	if temp.ID > 0 {
-//		return temp.ID, nil
-//	} else {
-//		err = DB.Create(s).Error
-//		return s.ID, err
-//	}
-//}
