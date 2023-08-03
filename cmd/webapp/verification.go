@@ -23,7 +23,7 @@ func handleVerification(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := util.ParseInitData(b)
+	user, _, err := util.ParseInitData(b)
 	if err != nil {
 		if errors.Is(err, util.ErrHashMismatch) {
 			http.Error(writer, "hash mismatch", http.StatusBadRequest)

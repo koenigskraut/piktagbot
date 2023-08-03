@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -98,33 +99,33 @@ func webAppUserFromString(user string) (*WebAppUser, error) {
 	return &u, nil
 }
 
-func ParseInitData(initData []byte) (user *WebAppUser, err error) {
-	fields := strings.Split(string(initData), "&")
-	fieldsToHash := make([]string, 0, len(fields)-1)
-
+func ParseInitData(initData []byte) (user *WebAppUser, authData int64, err error) {
 	var hash string
-
-	for _, field := range fields {
-		switch field[:5] {
-		case "hash=":
-			hash = field[5:]
-		case "user=":
-			field, err = url.QueryUnescape(field)
-			if err != nil {
-				return
-			}
-			user, err = webAppUserFromString(field[5:])
-			if err != nil {
-				return
-			}
-			fallthrough
-		default:
-			fieldsToHash = append(fieldsToHash, field)
-		}
+	values, err := url.ParseQuery(string(initData))
+	if err != nil {
+		return nil, 0, err
 	}
+	fields := make([]string, 0, 3) // magic number, it is 3 for now irl
+	for k, v := range values {
+		switch k {
+		case "hash":
+			hash = v[0]
+			continue
+		case "user":
+			err = json.Unmarshal([]byte(v[0]), &user)
+		case "auth_data":
+			authData, err = strconv.ParseInt(v[0], 10, 64)
+		}
+		if err != nil {
+			return
+		}
+		fields = append(fields, fmt.Sprintf("%s=%s", k, v[0]))
+	}
+	sort.Strings(fields)
+	toHash := strings.Join(fields, "\n")
 
-	if hash != hashOfFields(fieldsToHash) {
-		return nil, ErrHashMismatch
+	if hash != hashOfString(toHash) {
+		return nil, 0, ErrHashMismatch
 	}
 
 	return
