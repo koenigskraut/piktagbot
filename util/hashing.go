@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/gotd/td/tg"
 	"net/url"
 	"os"
 	"sort"
@@ -51,6 +53,40 @@ type WebAppUser struct {
 	LanguageCode    string `json:"language_code"`
 	IsPremium       bool   `json:"is_premium"`
 	AllowsWriteToPM bool   `json:"allows_write_to_pm"`
+}
+
+func (u *WebAppUser) FillFrom(tgUser *tg.User) {
+	u.ID = tgUser.ID
+	u.FirstName = tgUser.FirstName
+	u.LastName = tgUser.LastName
+	username, _ := tgUser.GetUsername()
+	u.Username = username
+	u.LanguageCode = tgUser.LangCode
+	u.IsPremium = tgUser.Premium
+	u.AllowsWriteToPM = false
+}
+
+type WebAppParams struct {
+	QueryID  string     `json:"query_id"`
+	User     WebAppUser `json:"user"`
+	AuthDate string     `json:"auth_date"`
+	Hash     string     `json:"hash"`
+}
+
+func (wp *WebAppParams) Serialize() (string, error) {
+	fields := make([]string, 3)
+	user, err := json.Marshal(wp.User)
+	if err != nil {
+		return "", err
+	}
+	fields[0] = fmt.Sprintf("query_id=%s", wp.QueryID)
+	fields[1] = fmt.Sprintf("user=%s", string(user))
+	fields[2] = fmt.Sprintf("auth_date=%s", wp.AuthDate)
+	start := strings.Join(fields, "&")
+
+	hash := hashOfFields(fields)
+	wp.Hash = hash
+	return fmt.Sprintf("%s&hash=%s", url.PathEscape(start), hash), nil
 }
 
 func webAppUserFromString(user string) (*WebAppUser, error) {

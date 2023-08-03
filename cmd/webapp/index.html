@@ -118,7 +118,7 @@
         let webApp = Telegram.WebApp;
         let container = null;
         let stickerNumber = 0;
-        webApp.MainButton.text = "Сохранить";
+        webApp.MainButton.text = "Сохранить порядок";
 
         function registerContainer() {
             container = document.getElementById("gridDemo");
@@ -180,8 +180,10 @@
                     if (evt.newIndex > stickerNumber-1) {
                         container.insertBefore(itemEl, container.children[stickerNumber-1]);
                     }
-                    if (evt.oldIndex !== evt.newIndex)
+                    if (evt.oldIndex !== evt.newIndex) {
+                        document.getElementById("info-header").style.display = "none";
                         webApp.MainButton.show();
+                    }
                 },
             });
         }
@@ -190,9 +192,11 @@
             window.Telegram.WebApp.ready();
             const overlay = document.getElementById("overlay");
             registerContainer();
+            const searchString = window.location.search.substring(1);
+            const requestBody = searchString ? searchString : webApp.initData;
             fetch("/hash", {
                 method: "POST",
-                body: webApp.initData
+                body: requestBody
             }).then(async res => {
                 if (!res.ok) {
                     console.error(await res.text());
