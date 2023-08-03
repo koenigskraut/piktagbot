@@ -12,12 +12,19 @@ import (
 	"os/signal"
 )
 
+var (
+	botToken    = os.Getenv("BOT_TOKEN")
+	sessionFile = os.Getenv("SESSION_FILE")
+	appPort     = os.Getenv("APP_PORT")
+	domain      = os.Getenv("DOMAIN")
+)
+
 func run(ctx context.Context) error {
 	logger, _ := zap.NewDevelopment(zap.IncreaseLevel(zapcore.InfoLevel))
 	defer func() { _ = logger.Sync() }()
 
 	dispatcher := tg.NewUpdateDispatcher()
-	fileSessionPath := os.Getenv("SESSION_FILE")
+	fileSessionPath := sessionFile
 
 	return telegram.BotFromEnvironment(
 		ctx,
