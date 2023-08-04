@@ -5,6 +5,7 @@
     <title>Sticker Tagger App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
     <style>
 
         .text {
@@ -62,11 +63,19 @@
             transform: scale(1.2);
         }
 
-        .sortable-unchosen {
-            transform: scale(0.9);
+        .sortable-chosen svg {
+            transform: scale(1.2) !important;
         }
 
-        img {
+        .sortable-fallback svg {
+            transform: scale(1.2) !important;
+        }
+
+        .sortable-unchosen {
+            transform: scale(0.9) !important;
+        }
+
+        .square-img {
             transition: transform 150ms ease;
             -webkit-transition: transform 150ms ease;
             -o-transition: transform 150ms ease;
@@ -151,7 +160,9 @@
         let webApp = Telegram.WebApp;
         let container = null;
         let stickerNumber = 0;
+        const stickerTypes = {"webp": "s", "tgs": "l", "webm": "v"};
         webApp.MainButton.text = "Сохранить порядок";
+        let animations = {};
 
         function registerContainer() {
             container = document.getElementById("gridDemo");
@@ -262,10 +273,24 @@
                     let elem = document.createElement("div");
                     elem.className = "grid-square";
                     elem.id = "elem" + String(stickerNumber+1);
-                    let elemChild = document.createElement("img");
-                    elemChild.className = "square-img";
-                    elemChild.src = "/stickers/" + ev.data;
-                    elem.appendChild(elemChild);
+                    if (ev.data[0] === stickerTypes.tgs) {
+                        animations[elem.id] = bodymovin.loadAnimation({
+                            container: elem,
+                            renderer: 'svg',
+                            loop: false,
+                            autoplay: false,
+                            path: "/stickers/" + ev.data.substring(1),
+                            rendererSettings: {
+                                className: 'square-img',
+                                progressiveLoad: true,
+                            }
+                        });
+                    } else {
+                        let elemChild = document.createElement("img");
+                        elemChild.src = "/stickers/" + ev.data.substring(1);
+                        elemChild.className = "square-img";
+                        elem.appendChild(elemChild);
+                    }
                     container.appendChild(elem)
                     stickerNumber++;
                 };

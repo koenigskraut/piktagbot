@@ -37,16 +37,15 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		recentStickers, _ := dbUser.RecentStickers()
-		locations := make([]*tg.InputDocumentFileLocation, 0, len(recentStickers))
+		locations := make([]InputDocumentMimeTyped, 0, len(recentStickers))
 		for _, r := range recentStickers {
-			// TODO handle other sticker types
-			if r.Sticker.Type != db.MimeTypeWebp {
-				continue
-			}
-			locations = append(locations, &tg.InputDocumentFileLocation{
-				ID:            r.Sticker.DocumentID,
-				AccessHash:    r.Sticker.AccessHash,
-				FileReference: r.Sticker.FileReference,
+			locations = append(locations, InputDocumentMimeTyped{
+				mimeType: r.Sticker.Type,
+				doc: &tg.InputDocumentFileLocation{
+					ID:            r.Sticker.DocumentID,
+					AccessHash:    r.Sticker.AccessHash,
+					FileReference: r.Sticker.FileReference,
+				},
 			})
 		}
 		fmt.Println(locations)
