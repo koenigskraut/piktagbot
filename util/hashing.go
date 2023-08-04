@@ -9,10 +9,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gotd/td/tg"
+	"net/http"
 	"net/url"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -44,6 +44,20 @@ func hashOfFields(fields []string) string {
 	})
 	toHash := strings.Join(fields, "\n")
 	return hashOfString(toHash)
+}
+
+func HashOfJSON(v any) (string, error) {
+	fmt.Printf("hashing %v\n", v)
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	fmt.Printf("marshalled as %s\n", b)
+	hm := hmac.New(sha256.New, GetSecretKey())
+	hm.Write(b)
+	result := hex.EncodeToString(hm.Sum(nil))
+	fmt.Printf("hash: %s\n", result)
+	return result, nil
 }
 
 type WebAppUser struct {
@@ -99,34 +113,41 @@ func webAppUserFromString(user string) (*WebAppUser, error) {
 	return &u, nil
 }
 
-func ParseInitData(initData []byte) (user *WebAppUser, authData int64, err error) {
-	var hash string
+func ParseInitData(initData []byte) (*WebAppParams, error) {
 	values, err := url.ParseQuery(string(initData))
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	fields := make([]string, 0, 3) // magic number, it is 3 for now irl
+	var params WebAppParams
 	for k, v := range values {
 		switch k {
 		case "hash":
-			hash = v[0]
+			params.Hash = v[0]
 			continue
 		case "user":
-			err = json.Unmarshal([]byte(v[0]), &user)
-		case "auth_data":
-			authData, err = strconv.ParseInt(v[0], 10, 64)
+			err = json.Unmarshal([]byte(v[0]), &params.User)
+		case "auth_date":
+			params.AuthDate = v[0]
 		}
 		if err != nil {
-			return
+			return nil, err
 		}
 		fields = append(fields, fmt.Sprintf("%s=%s", k, v[0]))
 	}
 	sort.Strings(fields)
 	toHash := strings.Join(fields, "\n")
 
-	if hash != hashOfString(toHash) {
-		return nil, 0, ErrHashMismatch
+	if params.Hash != hashOfString(toHash) {
+		return nil, ErrHashMismatch
 	}
 
-	return
+	return &params, nil
+}
+
+func HashOfRequestUser(request *http.Request) string {
+	ip := request.RemoteAddr
+	userAgent := request.Header.Get("User-Agent")
+	toHash := ip[:strings.Index(ip, ":")+1] + userAgent
+	return hashOfString(toHash)
 }
