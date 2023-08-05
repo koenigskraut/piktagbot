@@ -64,12 +64,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 			if len(as) > 50 {
 				as = as[:50]
 			}
-			if update.Query == "" {
-				w = w.SwitchWebview("Изменить порядок стикеров", URL)
-			} else {
-				w = w.SwitchPM("Добавить новые теги", "n")
-			}
-			if _, err := w.Set(ctx, as...); err != nil {
+			if _, err := w.SwitchWebview("Изменить порядок стикеров", URL).Set(ctx, as...); err != nil {
 				return err
 			}
 		} else {
