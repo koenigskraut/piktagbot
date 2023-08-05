@@ -71,7 +71,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 				return err
 			}
 		} else {
-			_, err := w.SwitchPM("Начать создавать теги!", "a").Set(ctx, inline.Article("", inline.MessageText("")))
+			_, err := w.SwitchPM("Начать создавать теги!", "a").Set(ctx)
 			return err
 		}
 		return nil
