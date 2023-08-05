@@ -18,8 +18,10 @@ type User struct {
 	AllowsWriteToPM bool   `json:"allows_write_to_pm"`
 }
 
+const InitFieldUserName = "user"
+
 func (u *User) Name() string {
-	return "user"
+	return InitFieldUserName
 }
 
 func (u *User) EncodeField() ([]byte, error) {
@@ -35,4 +37,19 @@ func (u *User) FillFrom(tgUser *tg.User) {
 	u.LanguageCode = tgUser.LangCode
 	u.IsPremium = tgUser.Premium
 	u.AllowsWriteToPM = false
+}
+
+func (u *User) DecodeField(input string) error {
+	if err := json.Unmarshal([]byte(input), u); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ProduceUser(input string) (InitDataField, error) {
+	var user User
+	if err := user.DecodeField(input); err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

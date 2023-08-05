@@ -12,6 +12,7 @@ import (
 type InitDataField interface {
 	Name() string
 	EncodeField() ([]byte, error)
+	DecodeField(string) error
 }
 
 type InitData []InitDataField
@@ -63,13 +64,13 @@ func (hd *InitData) Sign(key []byte) ([]byte, error) {
 			b[i] = '&'
 		}
 	}
-	hash := Hash(hex.EncodeToString(hm.Sum(nil)))
+	hash := Hash{Data: hex.EncodeToString(hm.Sum(nil))}
 
 	buf := bytes.NewBuffer(b)
 	if _, err := buf.WriteString("&hash="); err != nil {
 		return nil, err
 	}
-	if _, err := buf.WriteString(string(hash)); err != nil {
+	if _, err := buf.WriteString(hash.Data); err != nil {
 		return nil, err
 	}
 	*hd = append(*hd, &hash)

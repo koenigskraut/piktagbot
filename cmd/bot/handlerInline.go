@@ -51,8 +51,8 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 			}
 		}
 		webAppParams := webapp.InitData{
-			webapp.QueryID(strconv.FormatInt(update.QueryID, 10)), webAppUser,
-			webapp.AuthDate(time.Now().Unix()), webapp.Prefix(update.Query),
+			&webapp.QueryID{Data: strconv.FormatInt(update.QueryID, 10)}, webAppUser,
+			&webapp.AuthDate{Data: time.Now().Unix()}, &webapp.Prefix{Data: update.Query},
 		}
 		signed, err := webAppParams.Sign(util.GetSecretKey())
 		if err != nil {

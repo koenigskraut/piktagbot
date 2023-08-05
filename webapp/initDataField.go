@@ -17,45 +17,114 @@ import (
 //
 // Links:
 //  1. https://core.telegram.org/method/messages.sendWebViewResultMessage
-type QueryID string
-
-func (q QueryID) Name() string {
-	return "query_id"
+type QueryID struct {
+	Data string
 }
 
-func (q QueryID) EncodeField() ([]byte, error) {
-	return []byte(q), nil
+const InitFieldQueryIDName = "query_id"
+
+func (q *QueryID) Name() string {
+	return InitFieldQueryIDName
+}
+
+func (q *QueryID) EncodeField() ([]byte, error) {
+	return []byte(q.Data), nil
+}
+
+func (q *QueryID) DecodeField(input string) error {
+	q.Data = input
+	return nil
+}
+
+func ProduceQueryID(input string) (InitDataField, error) {
+	var queryID QueryID
+	if err := queryID.DecodeField(input); err != nil {
+		return nil, err
+	}
+	return &queryID, nil
 }
 
 // AuthDate is Unix time when the form was opened.
-type AuthDate int64
-
-func (a AuthDate) Name() string {
-	return "auth_date"
+type AuthDate struct {
+	Data int64
 }
 
-func (a AuthDate) EncodeField() ([]byte, error) {
-	return []byte(strconv.FormatInt(int64(a), 10)), nil
+const InitFieldAuthDateName = "auth_date"
+
+func (a *AuthDate) Name() string {
+	return InitFieldAuthDateName
+}
+
+func (a *AuthDate) EncodeField() ([]byte, error) {
+	return []byte(strconv.FormatInt(a.Data, 10)), nil
+}
+
+func (a *AuthDate) DecodeField(input string) error {
+	n, err := strconv.ParseInt(input, 10, 64)
+	a.Data = n
+	return err
+}
+
+func ProduceAuthDate(input string) (InitDataField, error) {
+	var authDate AuthDate
+	if err := authDate.DecodeField(input); err != nil {
+		return nil, err
+	}
+	return &authDate, nil
 }
 
 // Prefix is the user inline query, sent only by this bot from inline mode.
-type Prefix string
-
-func (p Prefix) Name() string {
-	return "prefix"
+type Prefix struct {
+	Data string
 }
 
-func (p Prefix) EncodeField() ([]byte, error) {
-	return []byte(p), nil
+const InitFieldPrefixName = "prefix"
+
+func (p *Prefix) Name() string {
+	return InitFieldPrefixName
+}
+
+func (p *Prefix) EncodeField() ([]byte, error) {
+	return []byte(p.Data), nil
+}
+
+func (p *Prefix) DecodeField(input string) error {
+	p.Data = input
+	return nil
+}
+
+func ProducePrefix(input string) (InitDataField, error) {
+	var prefix Prefix
+	if err := prefix.DecodeField(input); err != nil {
+		return nil, err
+	}
+	return &prefix, nil
 }
 
 // Hash is a hash of all passed parameters, which the bot server can use to check their validity.
-type Hash string
-
-func (h Hash) Name() string {
-	return "hash"
+type Hash struct {
+	Data string
 }
 
-func (h Hash) EncodeField() ([]byte, error) {
-	return []byte(h), nil
+const InitFieldHashName = "hash"
+
+func (h *Hash) Name() string {
+	return InitFieldHashName
+}
+
+func (h *Hash) EncodeField() ([]byte, error) {
+	return []byte(h.Data), nil
+}
+
+func (h *Hash) DecodeField(input string) error {
+	h.Data = input
+	return nil
+}
+
+func ProduceHash(input string) (InitDataField, error) {
+	var hash Hash
+	if err := hash.DecodeField(input); err != nil {
+		return nil, err
+	}
+	return &hash, nil
 }
