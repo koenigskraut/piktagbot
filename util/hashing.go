@@ -85,11 +85,12 @@ type WebAppParams struct {
 	QueryID  string     `json:"query_id"`
 	User     WebAppUser `json:"user"`
 	AuthDate string     `json:"auth_date"`
+	Prefix   string     `json:"prefix"`
 	Hash     string     `json:"hash"`
 }
 
 func (wp *WebAppParams) Serialize() (string, error) {
-	fields := make([]string, 3)
+	fields := make([]string, 4)
 	user, err := json.Marshal(wp.User)
 	if err != nil {
 		return "", err
@@ -97,6 +98,7 @@ func (wp *WebAppParams) Serialize() (string, error) {
 	fields[0] = fmt.Sprintf("query_id=%s", wp.QueryID)
 	fields[1] = fmt.Sprintf("user=%s", string(user))
 	fields[2] = fmt.Sprintf("auth_date=%s", wp.AuthDate)
+	fields[3] = fmt.Sprintf("prefix=%s", wp.Prefix)
 	start := strings.Join(fields, "&")
 
 	hash := hashOfFields(fields)
@@ -118,7 +120,7 @@ func ParseInitData(initData []byte) (*WebAppParams, error) {
 	if err != nil {
 		return nil, err
 	}
-	fields := make([]string, 0, 3) // magic number, it is 3 for now irl
+	fields := make([]string, 0, 4) // magic number, it is 3 for now irl plus my field
 	var params WebAppParams
 	for k, v := range values {
 		switch k {
