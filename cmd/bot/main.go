@@ -15,8 +15,8 @@ import (
 var (
 	botToken    = os.Getenv("BOT_TOKEN")
 	sessionFile = os.Getenv("SESSION_FILE")
+	appDomain   = os.Getenv("DOMAIN")
 	appPort     = os.Getenv("APP_PORT")
-	domain      = os.Getenv("DOMAIN")
 )
 
 func run(ctx context.Context) error {

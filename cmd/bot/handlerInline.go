@@ -58,7 +58,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		if err != nil {
 			return err
 		}
-		URL := fmt.Sprintf("https://koenigskraut.ru:55506?%s", url.PathEscape(string(signed)))
+		URL := fmt.Sprintf("https://%s:%s?%s", appDomain, appPort, url.PathEscape(string(signed)))
 
 		if len(as) > 0 {
 			if len(as) > 50 {
