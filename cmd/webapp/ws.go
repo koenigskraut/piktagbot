@@ -63,13 +63,19 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			log.Println(err)
 			return
 		}
-		recentStickers, err := dbUser.RecentStickers()
+		searchPrefix := sessionJSON.Prefix
+		var stickers []*db.StickerTag
+		if searchPrefix == "" {
+			stickers, err = dbUser.RecentStickers()
+		} else {
+			stickers, err = dbUser.SearchStickers(searchPrefix)
+		}
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		locations := make([]InputDocumentMimeTyped, 0, len(recentStickers))
-		for _, r := range recentStickers {
+		locations := make([]InputDocumentMimeTyped, 0, len(stickers))
+		for _, r := range stickers {
 			locations = append(locations, InputDocumentMimeTyped{
 				mimeType: r.Sticker.Type,
 				doc: &tg.InputDocumentFileLocation{
@@ -80,7 +86,7 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			})
 		}
 		var newFirst []byte
-		newFirstBool, err := dbUser.GetNewFirst("")
+		newFirstBool, err := dbUser.GetNewFirst(searchPrefix)
 		if err != nil {
 			log.Println(err)
 			return

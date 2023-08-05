@@ -14,6 +14,7 @@ import (
 
 type Session struct {
 	SessionID string `json:"session_id"`
+	Prefix    string `json:"prefix"`
 	Hash      string `json:"hash,omitempty"`
 }
 
@@ -52,7 +53,7 @@ func handleVerification(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	oneTimeSessions.createSession(params.User.ID, params.Hash[:16], userHash)
-	sessionJSON := Session{SessionID: params.Hash[:16]}
+	sessionJSON := Session{SessionID: params.Hash[:16], Prefix: params.Prefix}
 	sessionHash, err := util.HashOfJSON(sessionJSON)
 	if err != nil {
 		http.Error(writer, "server error", http.StatusInternalServerError)

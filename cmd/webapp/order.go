@@ -53,7 +53,7 @@ func handleOrderUpdate(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	order, err := dbUser.GetOrder("")
+	order, err := dbUser.GetOrder(update.UserSession.Prefix)
 	if err != nil {
 		http.Error(writer, "server error", http.StatusInternalServerError)
 		return

@@ -131,6 +131,8 @@ func ParseInitData(initData []byte) (*WebAppParams, error) {
 			err = json.Unmarshal([]byte(v[0]), &params.User)
 		case "auth_date":
 			params.AuthDate = v[0]
+		case "prefix":
+			params.Prefix = v[0]
 		}
 		if err != nil {
 			return nil, err
