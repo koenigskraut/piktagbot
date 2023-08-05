@@ -281,7 +281,21 @@
             });
         }
 
+        webApp.onEvent("viewportChanged", function (_) {
+            this.expand();
+        })
+
+        const DEF_DELAY = 1000;
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms || DEF_DELAY));
+        }
+
         async function foo() {
+            while (!webApp.isExpanded) {
+                window.Telegram.WebApp.expand();
+                await sleep(50);
+            }
             window.Telegram.WebApp.ready();
             const overlay = document.getElementById("overlay");
             registerMainButton();
@@ -293,7 +307,15 @@
                 body: requestBody
             }).then(async res => {
                 if (!res.ok) {
-                    console.error(await res.text());
+                    const text = await res.text();
+                    if (text.startsWith("date too old")) {
+                        webApp.showAlert(
+                            "Время сеccии истекло!\n\nЕсли вы видите это сообщение не в " +
+                            "первый раз, закройте и откройте заново диалог с ботом.",
+                            () => webApp.close()
+                        );
+                    }
+                    console.error(text);
                     return;
                 }
                 sessionGlobal = await res.json();
