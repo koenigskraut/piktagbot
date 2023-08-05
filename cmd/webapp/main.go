@@ -18,6 +18,7 @@ const (
 	WebAppHashPath     = "/hash"
 	WebAppWsPath       = "/ws"
 	WebAppStickersPath = "/stickers/"
+	WebAppOrderUpdate  = "/updateOrder"
 )
 
 //go:embed index.html
@@ -59,6 +60,7 @@ func main() {
 	http.HandleFunc(WebAppHashPath, handleVerification)
 	http.HandleFunc(WebAppWsPath, handleWS)
 	http.Handle(WebAppStickersPath, http.StripPrefix(WebAppStickersPath, http.FileServer(http.Dir(stickerPath))))
+	http.HandleFunc(WebAppOrderUpdate, handleOrderUpdate)
 
 	go func() {
 		err := http.ListenAndServeTLS(address, certFile, keyFile, nil)

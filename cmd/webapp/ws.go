@@ -63,7 +63,11 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			log.Println(err)
 			return
 		}
-		recentStickers, _ := dbUser.RecentStickers()
+		recentStickers, err := dbUser.RecentStickers()
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		locations := make([]InputDocumentMimeTyped, 0, len(recentStickers))
 		for _, r := range recentStickers {
 			locations = append(locations, InputDocumentMimeTyped{
@@ -75,7 +79,17 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 				},
 			})
 		}
-		fmt.Println(locations)
+		var newFirst []byte
+		newFirstBool, err := dbUser.GetNewFirst("")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		if newFirstBool {
+			newFirst = []byte("newFirst: 1")
+		} else {
+			newFirst = []byte("newFirst: 0")
+		}
 
 		myChan := make(chan string)
 		myFiles := receiveFiles{
@@ -83,9 +97,10 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			ch:    myChan,
 		}
 		downloadChan <- &myFiles
-		fmt.Println("sent")
+		if err := wsutil.WriteServerText(conn, newFirst); err != nil {
+			log.Println(3, err)
+		}
 		for r := range myChan {
-			fmt.Println(r)
 			if err := wsutil.WriteServerText(conn, []byte(r)); err != nil {
 				log.Println(3, err)
 			}

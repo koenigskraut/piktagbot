@@ -153,6 +153,7 @@
         }
         circle#radio-circle {
             transition: all 0.2s;
+            transform: translateX(22%);
         }
     </style>
     <script>
@@ -161,8 +162,10 @@
         let container = null;
         let stickerNumber = 0;
         const stickerTypes = {"webp": "s", "tgs": "l", "webm": "v"};
-        webApp.MainButton.text = "Сохранить порядок";
+        webApp.MainButton.text = "Сохранить изменения";
         let animations = {};
+        let sessionGlobal = {};
+        let newFirst = false;
 
         function registerContainer() {
             container = document.getElementById("gridDemo");
@@ -232,22 +235,56 @@
             });
         }
 
-        function registerRadio() {
-            const button = document.getElementById("radio-svg");
+        function registerRadio(isNewFirst) {
+            const radio = document.getElementById("radio-svg");
             const circle = document.getElementById("radio-circle");
-            button.addEventListener("click", function (){
+            if (isNewFirst) {
+                circle.style.transform = "translateX(0%)";
+            } else {
+                circle.style.transform = "translateX(44%)";
+            }
+            radio.addEventListener("click", function (){
                 if (circle.style.transform === "translateX(44%)") {
                     circle.style.transform = "translateX(0%)";
+                    newFirst = true;
                 } else {
                     circle.style.transform = "translateX(44%)";
+                    newFirst = false;
                 }
+                webApp.MainButton.show();
+            });
+        }
+
+        function registerMainButton() {
+            webApp.onEvent("mainButtonClicked", async () => {
+                const parent = document.getElementById("gridDemo");
+                let order = [];
+                for (const item of parent.children) {
+                    if (item.hasAttribute("data-sticker-id"))
+                        order.push(item.getAttribute("data-sticker-id"));
+                }
+                // apparently 64-bit integer handling is too much for JS
+                let strJSON = '{"session":' + JSON.stringify(sessionGlobal)+',';
+                strJSON += '"order":[' + order.join(",") + '],';
+                strJSON += newFirst ? '"new_first":true}' : '"new_first":false}';
+                console.log(strJSON);
+                await fetch("/updateOrder", {
+                    method: "POST",
+                    body: strJSON
+                }).then(async res => {
+                    if (!res.ok) {
+                        console.error(await res.text());
+                        return;
+                    }
+                    webApp.MainButton.hide();
+                });
             });
         }
 
         async function foo() {
             window.Telegram.WebApp.ready();
             const overlay = document.getElementById("overlay");
-            registerRadio();
+            registerMainButton();
             registerContainer();
             const searchString = window.location.search.substring(1);
             const requestBody = searchString ? searchString : webApp.initData;
@@ -259,27 +296,34 @@
                     console.error(await res.text());
                     return;
                 }
-                let resp = await res.json();
-                console.log(resp);
+                sessionGlobal = await res.json();
+                console.log("got " + JSON.stringify(sessionGlobal));
 
                 let socket = new WebSocket(wsPath);
                 socket.onopen = () => {
                     console.log("socket opened");
-                    socket.send(JSON.stringify(resp));
-                    console.log("TO SERVER: \"" + JSON.stringify(resp) + "\"");
+                    socket.send(JSON.stringify(sessionGlobal));
+                    console.log("TO SERVER: \"" + JSON.stringify(sessionGlobal) + "\"");
                 };
                 socket.onerror = (ev) => console.error(ev);
                 socket.onmessage = (ev) => {
+                    if (ev.data.startsWith("newFirst")) {
+                        newFirst = (ev.data[10] === "1");
+                        registerRadio(newFirst);
+                        return;
+                    }
                     let elem = document.createElement("div");
                     elem.className = "grid-square";
                     elem.id = "elem" + String(stickerNumber+1);
+                    const stickerID = ev.data.substring(1);
+                    elem.setAttribute("data-sticker-id", stickerID);
                     if (ev.data[0] === stickerTypes.tgs) {
                         animations[elem.id] = bodymovin.loadAnimation({
                             container: elem,
                             renderer: 'svg',
                             loop: false,
                             autoplay: false,
-                            path: "/stickers/" + ev.data.substring(1),
+                            path: "/stickers/" + stickerID,
                             rendererSettings: {
                                 className: 'square-img',
                                 progressiveLoad: true,
@@ -287,7 +331,7 @@
                         });
                     } else {
                         let elemChild = document.createElement("img");
-                        elemChild.src = "/stickers/" + ev.data.substring(1);
+                        elemChild.src = "/stickers/" + stickerID;
                         elemChild.className = "square-img";
                         elem.appendChild(elemChild);
                     }
