@@ -1,6 +1,6 @@
 package database
 
-func StickerTagsUnique(in []*StickerTag) (out []*StickerTag) {
+func stickersUnique(in []*StickerTag) (out []*StickerTag) {
 	out = make([]*StickerTag, 0, len(in))
 	checkUnique := make(map[uint64]bool)
 	for _, st := range in {
@@ -10,4 +10,23 @@ func StickerTagsUnique(in []*StickerTag) (out []*StickerTag) {
 		}
 	}
 	return
+}
+
+func stickersSort(in []*StickerTag, order *StickerOrder) error {
+	if err := order.SortStickers(in); err != nil {
+		return err
+	}
+	// immediately write new permutation just in case
+	if err := order.UpdateFromStickers(in); err != nil {
+		return err
+	}
+	return nil
+}
+
+func uniqueAndSorted(in []*StickerTag, order *StickerOrder) ([]*StickerTag, error) {
+	unique := stickersUnique(in)
+	if err := stickersSort(unique, order); err != nil {
+		return nil, err
+	}
+	return unique, nil
 }

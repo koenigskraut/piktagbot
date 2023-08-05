@@ -14,7 +14,7 @@ import (
 
 func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.UpdateBotInlineQuery) error {
 	sender := message.NewSender(client)
-	return func(ctx context.Context, entities tg.Entities, update *tg.UpdateBotInlineQuery) error {
+	return func(ctx context.Context, entities tg.Entities, update *tg.UpdateBotInlineQuery) (err error) {
 		var q []*db.StickerTag
 
 		u := db.User{UserID: update.UserID}
@@ -22,11 +22,13 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 			return e
 		}
 		if update.Query != "" {
-			q, _ = u.SearchStickers(update.Query)
+			q, err = u.SearchStickers(update.Query)
 		} else {
-			q, _ = u.RecentStickers()
+			q, err = u.RecentStickers()
 		}
-		_ = q
+		if err != nil {
+			return err
+		}
 
 		as := make([]inline.ResultOption, len(q))
 		for i, st := range q {

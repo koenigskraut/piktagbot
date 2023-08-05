@@ -77,18 +77,11 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 	if err != nil {
 		return nil, err
 	}
-	unique := StickerTagsUnique(pre)
 	order, err := u.GetOrder("")
 	if err != nil {
 		return nil, err
 	}
-	if err := order.SortStickers(unique); err != nil {
-		return nil, err
-	}
-	if err := order.UpdateFromStickers(unique); err != nil {
-		return nil, err
-	}
-	return unique, nil
+	return uniqueAndSorted(pre, order)
 }
 
 func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
@@ -104,8 +97,11 @@ func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 	if err := query.Find(&pre).Error; err != nil {
 		return nil, err
 	}
-
-	return StickerTagsUnique(pre), nil
+	order, err := u.GetOrder(prefix)
+	if err != nil {
+		return nil, err
+	}
+	return uniqueAndSorted(pre, order)
 }
 
 func (u *User) GetOrder(prefix string) (*StickerOrder, error) {
@@ -123,24 +119,10 @@ func (u *User) GetOrder(prefix string) (*StickerOrder, error) {
 			Prefix:   prefix,
 			NewFirst: true,
 		}
-		if err := DB.Create(&order).Error; err != nil {
+		if err = DB.Create(&order).Error; err != nil {
 			return nil, err
 		}
-		var stickerTags []*StickerTag
-		if prefix == "" {
-			stickerTags, err = u.RecentStickers()
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			stickerTags, err = u.SearchStickers(prefix)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if err = order.UpdateFromStickers(stickerTags); err != nil {
-			return nil, err
-		}
+		return &order, nil
 	}
 	return nil, err
 }
