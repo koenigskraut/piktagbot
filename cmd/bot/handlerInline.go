@@ -8,6 +8,8 @@ import (
 	"github.com/gotd/td/tg"
 	db "github.com/koenigskraut/piktagbot/database"
 	"github.com/koenigskraut/piktagbot/util"
+	"github.com/koenigskraut/piktagbot/webapp"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -41,31 +43,29 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		}
 
 		w := sender.Inline(update).CacheTimeSeconds(0).NextOffset("").Gallery(true)
-		webAppUser := util.WebAppUser{}
+		webAppUser := &webapp.User{}
 		for _, e := range entities.Users {
 			if e.ID == update.UserID {
 				webAppUser.FillFrom(e)
 				break
 			}
 		}
-		webAppParams := util.WebAppParams{
-			QueryID:  strconv.FormatInt(update.QueryID, 10),
-			User:     webAppUser,
-			AuthDate: strconv.FormatInt(time.Now().Unix(), 10),
-			Hash:     "",
+		webAppParams := webapp.InitData{
+			webapp.QueryID(strconv.FormatInt(update.QueryID, 10)), webAppUser,
+			webapp.AuthDate(time.Now().Unix()), webapp.Prefix(update.Query),
 		}
-		serialized, err := webAppParams.Serialize()
+		signed, err := webAppParams.Sign(util.GetSecretKey())
 		if err != nil {
 			return err
 		}
-		url := fmt.Sprintf("https://koenigskraut.ru:55506?%s", serialized)
+		URL := fmt.Sprintf("https://koenigskraut.ru:55506?%s", url.PathEscape(string(signed)))
 
 		if len(as) > 0 {
 			if len(as) > 50 {
 				as = as[:50]
 			}
 			if update.Query == "" {
-				w = w.SwitchWebview("Изменить порядок стикеров", url)
+				w = w.SwitchWebview("Изменить порядок стикеров", URL)
 			} else {
 				w = w.SwitchPM("Добавить новые теги", "n")
 			}
