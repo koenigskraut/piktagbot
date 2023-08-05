@@ -25,6 +25,7 @@ func InitializeDB() {
 	viaSSH := os.Getenv("PTB_VIA_SSH") != ""
 	if viaSSH {
 		sshHost := os.Getenv("sshHost") // SSH Server Hostname/IP
+		sshPort := os.Getenv("sshPort") // SSH Server Hostname/IP
 		sshUser := os.Getenv("sshUser") // SSH Username
 		sshPass := os.Getenv("sshPass") // Empty string for no password
 		dbUser := os.Getenv("dbUser")   // DB username
@@ -39,7 +40,7 @@ func InitializeDB() {
 			},
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		}
-		SSHCon, _ = ssh.Dial("tcp", sshHost+":22", sshConfig)
+		SSHCon, _ = ssh.Dial("tcp", sshHost+":"+sshPort, sshConfig)
 		// TODO it's deprecated, change it or maybe remove this code since it is of no use rn
 		mysql.RegisterDial("mysql+tcp", (&ViaSSHDialer{SSHCon}).Dial)
 		var err error
