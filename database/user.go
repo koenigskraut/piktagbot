@@ -108,11 +108,11 @@ func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 	return StickerTagsUnique(pre), nil
 }
 
-func (u *User) GetOrder(tag string) (*StickerOrder, error) {
+func (u *User) GetOrder(prefix string) (*StickerOrder, error) {
 	var order StickerOrder
 	err := DB.Where(&StickerOrder{
-		User: u.UserID,
-		Tag:  tag,
+		User:   u.UserID,
+		Prefix: prefix,
 	}).First(&order).Error
 	if err == nil {
 		return &order, nil
@@ -120,20 +120,20 @@ func (u *User) GetOrder(tag string) (*StickerOrder, error) {
 	if err == gorm.ErrRecordNotFound {
 		order = StickerOrder{
 			User:     u.UserID,
-			Tag:      tag,
+			Prefix:   prefix,
 			NewFirst: true,
 		}
 		if err := DB.Create(&order).Error; err != nil {
 			return nil, err
 		}
 		var stickerTags []*StickerTag
-		if tag == "" {
+		if prefix == "" {
 			stickerTags, err = u.RecentStickers()
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			stickerTags, err = u.SearchStickers(tag)
+			stickerTags, err = u.SearchStickers(prefix)
 			if err != nil {
 				return nil, err
 			}
@@ -145,8 +145,8 @@ func (u *User) GetOrder(tag string) (*StickerOrder, error) {
 	return nil, err
 }
 
-func (u *User) GetNewFirst(tag string) (bool, error) {
-	order, err := u.GetOrder(tag)
+func (u *User) GetNewFirst(prefix string) (bool, error) {
+	order, err := u.GetOrder(prefix)
 	if err != nil {
 		return false, err
 	}

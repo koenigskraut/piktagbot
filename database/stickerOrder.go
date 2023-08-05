@@ -12,7 +12,7 @@ import (
 // +-----------+--------------+------+-----+---------+----------------+
 // | id        | int unsigned | NO   | PRI | NULL    | auto_increment |
 // | user      | bigint       | NO   |     | NULL    |                |
-// | tag       | text         | YES  |     | NULL    |                |
+// | prefix    | text         | YES  |     | NULL    |                |
 // | new_first | tinyint(1)   | NO   |     | 1       |                |
 // | tag_order | blob         | YES  |     | NULL    |                |
 // +-----------+--------------+------+-----+---------+----------------+
@@ -20,7 +20,7 @@ import (
 type StickerOrder struct {
 	ID       uint64 `gorm:"primaryKey"`
 	User     int64
-	Tag      string
+	Prefix   string
 	NewFirst bool
 	TagOrder []byte
 }
