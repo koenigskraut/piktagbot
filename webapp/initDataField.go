@@ -1,16 +1,11 @@
 package webapp
 
 import (
-	"strconv"
+	"bufio"
+	"errors"
+	"fmt"
+	"sync"
 )
-
-//type WebAppParams struct {
-//	QueryID  string     `json:"query_id"`
-//	User     WebAppUser `json:"user"`
-//	AuthDate string     `json:"auth_date"`
-//	Prefix   string     `json:"prefix"`
-//	Hash     string     `json:"hash"`
-//}
 
 // QueryID is a unique identifier for the Web App session, required for sending messages via the
 // messages.sendWebViewResultMessage¹ method.
@@ -21,27 +16,23 @@ type QueryID struct {
 	Data string
 }
 
-const InitFieldQueryIDName = "query_id"
+const QueryIDName = "query_id"
 
 func (q *QueryID) Name() string {
-	return InitFieldQueryIDName
+	return QueryIDName
 }
 
-func (q *QueryID) EncodeField() ([]byte, error) {
-	return []byte(q.Data), nil
+func (q *QueryID) EncodeData(w *bufio.Writer) error {
+	return writeString(w, q.Data)
 }
 
-func (q *QueryID) DecodeField(input string) error {
-	q.Data = input
-	return nil
-}
-
-func ProduceQueryID(input string) (InitDataField, error) {
-	var queryID QueryID
-	if err := queryID.DecodeField(input); err != nil {
-		return nil, err
+func (q *QueryID) DecodeData(r *bufio.Reader) error {
+	s, err := readString(r)
+	if err != nil {
+		return err
 	}
-	return &queryID, nil
+	q.Data = s
+	return nil
 }
 
 // AuthDate is Unix time when the form was opened.
@@ -49,28 +40,23 @@ type AuthDate struct {
 	Data int64
 }
 
-const InitFieldAuthDateName = "auth_date"
+const AuthDateName = "auth_date"
 
 func (a *AuthDate) Name() string {
-	return InitFieldAuthDateName
+	return AuthDateName
 }
 
-func (a *AuthDate) EncodeField() ([]byte, error) {
-	return []byte(strconv.FormatInt(a.Data, 10)), nil
+func (a *AuthDate) EncodeData(w *bufio.Writer) error {
+	return writeInt(w, a.Data)
 }
 
-func (a *AuthDate) DecodeField(input string) error {
-	n, err := strconv.ParseInt(input, 10, 64)
-	a.Data = n
-	return err
-}
-
-func ProduceAuthDate(input string) (InitDataField, error) {
-	var authDate AuthDate
-	if err := authDate.DecodeField(input); err != nil {
-		return nil, err
+func (a *AuthDate) DecodeData(r *bufio.Reader) error {
+	n, err := readInt(r, 10, 64)
+	if err != nil {
+		return err
 	}
-	return &authDate, nil
+	a.Data = n
+	return nil
 }
 
 // Prefix is the user inline query, sent only by this bot from inline mode.
@@ -78,27 +64,23 @@ type Prefix struct {
 	Data string
 }
 
-const InitFieldPrefixName = "prefix"
+const PrefixName = "prefix"
 
 func (p *Prefix) Name() string {
-	return InitFieldPrefixName
+	return PrefixName
 }
 
-func (p *Prefix) EncodeField() ([]byte, error) {
-	return []byte(p.Data), nil
+func (p *Prefix) EncodeData(w *bufio.Writer) error {
+	return writeString(w, p.Data)
 }
 
-func (p *Prefix) DecodeField(input string) error {
-	p.Data = input
-	return nil
-}
-
-func ProducePrefix(input string) (InitDataField, error) {
-	var prefix Prefix
-	if err := prefix.DecodeField(input); err != nil {
-		return nil, err
+func (p *Prefix) DecodeData(r *bufio.Reader) error {
+	s, err := readString(r)
+	if err != nil {
+		return err
 	}
-	return &prefix, nil
+	p.Data = s
+	return nil
 }
 
 // Hash is a hash of all passed parameters, which the bot server can use to check their validity.
@@ -106,25 +88,61 @@ type Hash struct {
 	Data string
 }
 
-const InitFieldHashName = "hash"
+const HashName = "hash"
 
 func (h *Hash) Name() string {
-	return InitFieldHashName
+	return HashName
 }
 
-func (h *Hash) EncodeField() ([]byte, error) {
-	return []byte(h.Data), nil
+func (h *Hash) EncodeData(w *bufio.Writer) error {
+	return writeString(w, h.Data)
 }
 
-func (h *Hash) DecodeField(input string) error {
-	h.Data = input
+func (h *Hash) DecodeData(r *bufio.Reader) error {
+	s, err := readString(r)
+	if err != nil {
+		return err
+	}
+	h.Data = s
 	return nil
 }
 
-func ProduceHash(input string) (InitDataField, error) {
-	var hash Hash
-	if err := hash.DecodeField(input); err != nil {
+func EncodeField(w *bufio.Writer, field InitDataField) error {
+	_, err := fmt.Fprintf(w, "%s=", field.Name())
+	if err != nil {
+		return err
+	}
+	return field.EncodeData(w)
+}
+
+func DecodeField(r *bufio.Reader) (InitDataField, error) {
+	name, err := readName(r)
+	if err != nil {
 		return nil, err
 	}
-	return &hash, nil
+	fieldFunc, ok := getMapTypes()[name]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("unknown field name: \"%s\"", name))
+	}
+	field := fieldFunc()
+	if err := field.DecodeData(r); err != nil {
+		return nil, err
+	}
+	return field, nil
+}
+
+var mapTypes map[string]func() InitDataField
+var mapTypesOnce = sync.Once{}
+
+func getMapTypes() map[string]func() InitDataField {
+	mapTypesOnce.Do(func() {
+		mapTypes = map[string]func() InitDataField{
+			QueryIDName:  func() InitDataField { return &QueryID{} },
+			AuthDateName: func() InitDataField { return &AuthDate{} },
+			PrefixName:   func() InitDataField { return &Prefix{} },
+			UserName:     func() InitDataField { return &User{} },
+			HashName:     func() InitDataField { return &Hash{} },
+		}
+	})
+	return mapTypes
 }

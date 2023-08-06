@@ -9,7 +9,6 @@ import (
 	db "github.com/koenigskraut/piktagbot/database"
 	"github.com/koenigskraut/piktagbot/util"
 	"github.com/koenigskraut/piktagbot/webapp"
-	"net/url"
 	"strconv"
 	"time"
 )
@@ -58,7 +57,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		if err != nil {
 			return err
 		}
-		URL := fmt.Sprintf("https://%s:%s?%s", appDomain, appPort, url.PathEscape(string(signed)))
+		URL := fmt.Sprintf("https://%s:%s?%s", appDomain, appPort, string(signed))
 
 		if len(as) > 0 {
 			if len(as) > 50 {

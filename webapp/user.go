@@ -1,7 +1,7 @@
 package webapp
 
 import (
-	"encoding/json"
+	"bufio"
 	"github.com/gotd/td/tg"
 )
 
@@ -18,15 +18,7 @@ type User struct {
 	AllowsWriteToPM bool   `json:"allows_write_to_pm"`
 }
 
-const InitFieldUserName = "user"
-
-func (u *User) Name() string {
-	return InitFieldUserName
-}
-
-func (u *User) EncodeField() ([]byte, error) {
-	return json.Marshal(u)
-}
+const UserName = "user"
 
 func (u *User) FillFrom(tgUser *tg.User) {
 	u.ID = tgUser.ID
@@ -39,17 +31,14 @@ func (u *User) FillFrom(tgUser *tg.User) {
 	u.AllowsWriteToPM = false
 }
 
-func (u *User) DecodeField(input string) error {
-	if err := json.Unmarshal([]byte(input), u); err != nil {
-		return err
-	}
-	return nil
+func (u *User) Name() string {
+	return UserName
 }
 
-func ProduceUser(input string) (InitDataField, error) {
-	var user User
-	if err := user.DecodeField(input); err != nil {
-		return nil, err
-	}
-	return &user, nil
+func (u *User) EncodeData(w *bufio.Writer) error {
+	return writeJSON(w, u)
+}
+
+func (u *User) DecodeData(r *bufio.Reader) error {
+	return readJSON(r, u)
 }

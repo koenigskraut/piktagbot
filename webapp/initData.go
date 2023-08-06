@@ -11,68 +11,59 @@ import (
 
 type InitDataField interface {
 	Name() string
-	EncodeField() ([]byte, error)
-	DecodeField(string) error
+	EncodeData(*bufio.Writer) error
+	DecodeData(*bufio.Reader) error
 }
 
 type InitData []InitDataField
 
-func (hd *InitData) Serialize() ([]byte, error) {
+func (hd *InitData) Serialize(glue byte) ([]byte, error) {
 	buf := &bytes.Buffer{}
-	for _, f := range *hd {
-		if _, err := buf.WriteString(f.Name()); err != nil {
+	w := bufio.NewWriter(buf)
+	for i, f := range *hd {
+		if err := EncodeField(w, f); err != nil {
 			return nil, err
 		}
-		if err := buf.WriteByte('='); err != nil {
-			return nil, err
+		if i == len(*hd)-1 {
+			continue
 		}
-		field, err := f.EncodeField()
-		if err != nil {
-			return nil, err
-		}
-		if _, err := buf.Write(field); err != nil {
-			return nil, err
-		}
-		if err := buf.WriteByte('&'); err != nil {
+		if err := w.WriteByte(glue); err != nil {
 			return nil, err
 		}
 	}
-	result := buf.Bytes()
-	return result[:buf.Len()-1], nil
+	if err := w.Flush(); err != nil {
+		return nil, err
+	}
+	b := buf.Bytes()
+	if glue == '&' {
+		b = []byte(url.PathEscape(string(b)))
+	}
+	return b, nil
 }
 
 func (hd *InitData) Sign(key []byte) ([]byte, error) {
 	sort.Slice(*hd, func(i, j int) bool {
 		return strings.Compare((*hd)[i].Name(), (*hd)[j].Name()) < 0
 	})
-	b, err := hd.Serialize()
+	b, err := hd.Serialize('\n')
 	if err != nil {
 		return nil, err
 	}
 
-	for i, char := range b {
-		if char == '&' {
-			b[i] = '\n'
-		}
-	}
 	hm := hmac.New(sha256.New, key)
 	if _, err := hm.Write(b); err != nil {
 		return nil, err
 	}
-	for i, char := range b {
-		if char == '\n' {
-			b[i] = '&'
-		}
-	}
-	hash := Hash{Data: hex.EncodeToString(hm.Sum(nil))}
+	hash := &Hash{Data: hex.EncodeToString(hm.Sum(nil))}
 
 	buf := bytes.NewBuffer(b)
-	if _, err := buf.WriteString("&hash="); err != nil {
+	w := bufio.NewWriter(buf)
+	if err := EncodeField(w, hash); err != nil {
 		return nil, err
 	}
-	if _, err := buf.WriteString(hash.Data); err != nil {
+	if err := w.Flush(); err != nil {
 		return nil, err
 	}
-	*hd = append(*hd, &hash)
-	return buf.Bytes(), nil
+	*hd = append(*hd, hash)
+	return hd.Serialize('&')
 }
