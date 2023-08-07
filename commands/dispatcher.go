@@ -34,10 +34,12 @@ type preDefaultHandlers struct {
 //	}
 //	cmdDispatched.OnNewCommand("start", startCmd)
 type HelperCapture struct {
-	Client     *tg.Client
-	Sender     *message.Sender
-	Uploader   *uploader.Uploader
-	Downloader *downloader.Downloader
+	Client      *tg.Client
+	Sender      *message.Sender
+	Uploader    *uploader.Uploader
+	Downloader  *downloader.Downloader
+	Clear       string
+	UserCapture any
 }
 
 // CommandDispatcher f
@@ -130,6 +132,7 @@ func (u CommandDispatcher) dispatch(ctx context.Context, e tg.Entities, update *
 	if !ok {
 		handler = u.preDefault.def
 	}
+	u.capture.Clear = cmd.clear
 	return handler(ctx, e, update, u.capture)
 }
 

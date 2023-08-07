@@ -46,6 +46,7 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *comma
 		if err != nil {
 			return err
 		}
+		c.UserCapture = user
 
 		// TODO get rid of strings, use enum-like constants, rework flag system
 		// are we waiting for something from user?
