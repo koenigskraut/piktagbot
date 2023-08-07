@@ -84,12 +84,19 @@ func (hd *InitData) Parse(data []byte) error {
 func (hd *InitData) Verify(key []byte) (bool, error) {
 	fieldsNum := len(*hd) - 1
 	newData := make(InitData, 0, fieldsNum)
-	newData = (*hd)[:fieldsNum]
-	hash, err := newData.Hash(key)
+	var oldHash *Hash
+	for _, field := range *hd {
+		if field.Name() == HashName {
+			oldHash = field.(*Hash)
+			continue
+		}
+		newData = append(newData, field)
+	}
+	newHash, err := newData.Hash(key)
 	if err != nil {
 		return false, err
 	}
-	return hash.Data == (*hd)[fieldsNum].(*Hash).Data, nil
+	return newHash.Data == oldHash.Data, nil
 }
 
 func (hd *InitData) ToMap() map[string]InitDataField {
