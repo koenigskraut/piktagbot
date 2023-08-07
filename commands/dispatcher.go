@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/gotd/td/telegram/downloader"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/uploader"
@@ -108,7 +107,6 @@ func (u CommandDispatcher) OnNewCommand(cmd string, handler CommandHandler) {
 
 // NewMessageHandler returns a handler for tg.UpdateDispatcher.OnNewMessage() method
 func (u CommandDispatcher) NewMessageHandler(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
-	fmt.Println(update)
 	return u.dispatch(ctx, e, update)
 }
 
@@ -120,13 +118,13 @@ func (u CommandDispatcher) dispatch(ctx context.Context, e tg.Entities, update *
 	if !ok {
 		return nil
 	}
-	cmd, ok := readFirstCommand(msg)
-	if !ok {
-		return u.preDefault.def(ctx, e, update, u.capture)
-	}
 	// either read error occurred or update was consumed (nil), return in both cases
 	if err := u.preDefault.pre(ctx, e, update, u.capture); !errors.Is(err, ErrNoAction) {
 		return err
+	}
+	cmd, ok := readFirstCommand(msg)
+	if !ok {
+		return u.preDefault.def(ctx, e, update, u.capture)
 	}
 	handler, ok := u.handlers[cmd.command]
 	if !ok {
