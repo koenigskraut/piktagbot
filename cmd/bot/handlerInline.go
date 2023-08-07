@@ -49,11 +49,14 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 				break
 			}
 		}
-		webAppParams := webapp.InitData{
+		webAppParams := webapp.InitDataList{
 			&webapp.QueryID{Data: strconv.FormatInt(update.QueryID, 10)}, webAppUser,
 			&webapp.AuthDate{Data: time.Now().Unix()}, &webapp.Prefix{Data: update.Query},
 		}
-		signed, err := webAppParams.Sign(util.GetSecretKey())
+		if err := webAppParams.Sign(util.GetSecretKey()); err != nil {
+			return err
+		}
+		signed, err := webAppParams.Serialize('&')
 		if err != nil {
 			return err
 		}

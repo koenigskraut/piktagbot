@@ -17,7 +17,7 @@ hash=abcdef123456789`
 func Test_DecodeSimpleFields(t *testing.T) {
 	buf := bytes.NewBuffer([]byte(simpleFieldsURL))
 	r := bufio.NewReaderSize(buf, buf.Len())
-	wantedResults := InitData{
+	wantedResults := InitDataList{
 		&QueryID{Data: "123"},
 		&AuthDate{Data: 12345678},
 		&Prefix{Data: "query"},
@@ -36,10 +36,10 @@ func Test_DecodeSimpleFields(t *testing.T) {
 	}
 }
 
-func Test_SerializeSimpleFields(t *testing.T) {
+func Test_EncodeSimpleFields(t *testing.T) {
 	expect1 := []byte(simpleFieldsURL)
 	expect2 := []byte(simpleFieldsHash)
-	results := InitData{
+	results := InitDataList{
 		&QueryID{Data: "123"},
 		&AuthDate{Data: 12345678},
 		&Prefix{Data: "query"},

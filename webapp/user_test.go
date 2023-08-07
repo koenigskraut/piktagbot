@@ -14,7 +14,7 @@ const userDataHash = `user={"id":123456789,"first_name":"Valéry","last_name":"Z
 func Test_DecodeUser(t *testing.T) {
 	buf := bytes.NewBuffer([]byte(userDataURL))
 	r := bufio.NewReaderSize(buf, buf.Len())
-	wantedResults := InitData{
+	wantedResults := InitDataList{
 		&User{
 			ID:              123456789,
 			FirstName:       "Valéry",     // %C3%A9
@@ -41,7 +41,7 @@ func Test_DecodeUser(t *testing.T) {
 func Test_SerializeUser(t *testing.T) {
 	expect1 := []byte(userDataURL)
 	expect2 := []byte(userDataHash)
-	results := InitData{
+	results := InitDataList{
 		&User{
 			ID:              123456789,
 			FirstName:       "Valéry",     // %C3%A9

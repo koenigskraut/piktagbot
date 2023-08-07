@@ -25,7 +25,7 @@ func handleVerification(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	params := webapp.InitData{}
+	params := webapp.InitDataMap{}
 	if err := params.Parse(b); err != nil {
 		http.Error(writer, "malformed init data", http.StatusBadRequest)
 		return
@@ -39,11 +39,10 @@ func handleVerification(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "hash mismatch", http.StatusBadRequest)
 	}
 
-	resMap := params.ToMap()
-	authDate := resMap[webapp.AuthDateName].(*webapp.AuthDate).Data
-	hash := resMap[webapp.HashName].(*webapp.Hash).Data
-	user := resMap[webapp.UserName].(*webapp.User)
-	query := resMap[webapp.PrefixName].(*webapp.Prefix).Data
+	authDate := params[webapp.AuthDateName].(*webapp.AuthDate).Data
+	hash := params[webapp.HashName].(*webapp.Hash).Data
+	user := params[webapp.UserName].(*webapp.User)
+	query := params[webapp.PrefixName].(*webapp.Prefix).Data
 	userHash := util.HashOfRequestUser(request)
 	if delta := time.Now().Unix() - authDate; delta > 30 {
 		// session init is definitely failed, maybe user just refreshed the page?
