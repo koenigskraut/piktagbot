@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/commands"
 	"github.com/koenigskraut/piktagbot/database"
@@ -10,16 +9,14 @@ import (
 	"sync"
 )
 
-func handleMessages(client *tg.Client) func(context.Context, tg.Entities, *tg.UpdateNewMessage) error {
-	sender := message.NewSender(client)
-
+func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *commands.HelperCapture) error {
 	messageSemaphore := struct {
 		sync.Mutex
 		data map[int64]*sync.Mutex
 	}{
 		data: map[int64]*sync.Mutex{},
 	}
-	return func(ctx context.Context, entities tg.Entities, u *tg.UpdateNewMessage) error {
+	return func(ctx context.Context, entities tg.Entities, u *tg.UpdateNewMessage, c *commands.HelperCapture) error {
 		m, ok := u.Message.(*tg.Message)
 		// if there is an error or a message is outgoing/non-pm
 		if !ok || m.Out || m.PeerID.TypeName() != "peerUser" {
@@ -57,14 +54,14 @@ func handleMessages(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 			text, markup := flags.Remove(m, user)
 			var err error
 			if markup == nil {
-				_, err = sender.Answer(entities, u).Text(ctx, text)
+				_, err = c.Sender.Answer(entities, u).Text(ctx, text)
 			} else {
-				_, err = sender.Answer(entities, u).Markup(markup).Text(ctx, text)
+				_, err = c.Sender.Answer(entities, u).Markup(markup).Text(ctx, text)
 			}
 			return err
 		case "add-sticker":
 			text := flags.Add(m, user)
-			_, err := sender.Answer(entities, u).Text(ctx, text)
+			_, err := c.Sender.Answer(entities, u).Text(ctx, text)
 			return err
 		default:
 			break
@@ -73,7 +70,7 @@ func handleMessages(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 		// if not, check the message for commands:
 		foundCommand, clearMessage := parseFirstCommand(m)
 		if foundCommand != "" {
-			answer := sender.Answer(entities, u)
+			answer := c.Sender.Answer(entities, u)
 			switch foundCommand {
 			case "start":
 				return commands.Start(ctx, answer, userIsNew)
@@ -84,7 +81,7 @@ func handleMessages(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 			case "cancel":
 				return commands.Cancel(ctx, answer)
 			case "tag":
-				return commands.Tag(ctx, answer, m, client, clearMessage)
+				return commands.Tag(ctx, answer, m, c.Client, clearMessage)
 			case "remove":
 				return commands.Remove(ctx, answer, m, client)
 			default:

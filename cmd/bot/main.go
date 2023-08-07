@@ -4,7 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/gotd/td/telegram"
+	"github.com/gotd/td/telegram/downloader"
+	"github.com/gotd/td/telegram/message"
+	"github.com/gotd/td/telegram/uploader"
 	"github.com/gotd/td/tg"
+	"github.com/koenigskraut/piktagbot/commands"
 	db "github.com/koenigskraut/piktagbot/database"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -34,7 +38,15 @@ func run(ctx context.Context) error {
 			UpdateHandler:  dispatcher,
 		}, func(ctx context.Context, client *telegram.Client) error {
 			myClient := tg.NewClient(client)
-			dispatcher.OnNewMessage(handleMessages(myClient))
+
+			cmdDispatcher := commands.NewCommandDispatcher(&dispatcher).
+				WithClient(myClient).
+				WithSender(message.NewSender(myClient)).
+				WithUploader(uploader.NewUploader(myClient)).
+				WithDownloader(downloader.NewDownloader())
+			cmdDispatcher.Pre(handlePre())
+
+			//dispatcher.OnNewMessage(handleMessages(myClient))
 			dispatcher.OnBotInlineQuery(handleInline(myClient))
 			dispatcher.OnBotCallbackQuery(handleCallback(myClient))
 			return nil
