@@ -45,6 +45,8 @@ func run(ctx context.Context) error {
 				WithUploader(uploader.NewUploader(myClient)).
 				WithDownloader(downloader.NewDownloader())
 			cmdDispatcher.Pre(handlePre())
+			cmdDispatcher.OnNewCommand("help", commands.Help)
+			cmdDispatcher.OnNewCommand("cancel", commands.Cancel)
 
 			//dispatcher.OnNewMessage(handleMessages(myClient))
 			dispatcher.OnBotInlineQuery(handleInline(myClient))

@@ -2,10 +2,10 @@ package commands
 
 import (
 	"context"
-	"github.com/gotd/td/telegram/message"
+	"github.com/gotd/td/tg"
 )
 
-func Cancel(ctx context.Context, answer *message.RequestBuilder) error {
-	_, err := answer.Text(ctx, "Нечего отменять!")
+func Cancel(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) error {
+	_, err := c.Sender.Answer(e, upd).Text(ctx, "Нечего отменять!")
 	return err
 }
