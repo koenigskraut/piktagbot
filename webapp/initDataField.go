@@ -7,6 +7,36 @@ import (
 	"sync"
 )
 
+type InitDataField interface {
+	Name() string
+	EncodeData(*bufio.Writer) error
+	DecodeData(*bufio.Reader) error
+}
+
+func EncodeField(w *bufio.Writer, field InitDataField) error {
+	_, err := fmt.Fprintf(w, "%s=", field.Name())
+	if err != nil {
+		return err
+	}
+	return field.EncodeData(w)
+}
+
+func DecodeField(r *bufio.Reader) (InitDataField, error) {
+	name, err := readName(r)
+	if err != nil {
+		return nil, err
+	}
+	fieldFunc, ok := getMapTypes()[name]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("unknown field name: \"%s\"", name))
+	}
+	field := fieldFunc()
+	if err := field.DecodeData(r); err != nil {
+		return nil, err
+	}
+	return field, nil
+}
+
 // QueryID is a unique identifier for the Web App session, required for sending messages via the
 // messages.sendWebViewResultMessage¹ method.
 //
@@ -105,30 +135,6 @@ func (h *Hash) DecodeData(r *bufio.Reader) error {
 	}
 	h.Data = s
 	return nil
-}
-
-func EncodeField(w *bufio.Writer, field InitDataField) error {
-	_, err := fmt.Fprintf(w, "%s=", field.Name())
-	if err != nil {
-		return err
-	}
-	return field.EncodeData(w)
-}
-
-func DecodeField(r *bufio.Reader) (InitDataField, error) {
-	name, err := readName(r)
-	if err != nil {
-		return nil, err
-	}
-	fieldFunc, ok := getMapTypes()[name]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("unknown field name: \"%s\"", name))
-	}
-	field := fieldFunc()
-	if err := field.DecodeData(r); err != nil {
-		return nil, err
-	}
-	return field, nil
 }
 
 var mapTypes map[string]func() InitDataField

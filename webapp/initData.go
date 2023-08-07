@@ -13,12 +13,6 @@ import (
 	"strings"
 )
 
-type InitDataField interface {
-	Name() string
-	EncodeData(*bufio.Writer) error
-	DecodeData(*bufio.Reader) error
-}
-
 type InitData []InitDataField
 
 func (hd *InitData) Serialize(glue byte) ([]byte, error) {
