@@ -4,16 +4,19 @@ package commands
 
 import (
 	"context"
-	"github.com/gotd/td/telegram/message"
+	"errors"
 	"github.com/gotd/td/tg"
-	"github.com/koenigskraut/piktagbot/database"
+	db "github.com/koenigskraut/piktagbot/database"
 	"github.com/koenigskraut/piktagbot/util"
 	"strings"
 )
 
-func Tag(ctx context.Context, answer *message.RequestBuilder, m *tg.Message, client *tg.Client, clear string) error {
+func Tag(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) (err error) {
+	m := upd.Message.(*tg.Message)
 	userID := m.PeerID.(*tg.PeerUser).UserID
-	text := strings.TrimSpace(clear)
+	user := c.UserCapture.(*db.User)
+	answer := c.Sender.Answer(e, upd)
+	text := strings.TrimSpace(c.Clear)
 
 	// if there is no tag in a message return immediately
 	if text == "" {
@@ -24,7 +27,7 @@ func Tag(ctx context.Context, answer *message.RequestBuilder, m *tg.Message, cli
 	// case 1: message is a reply, handle re message
 	if m.ReplyTo != nil {
 		// get re message
-		mRep, _ := client.MessagesGetMessages(
+		mRep, _ := c.Client.MessagesGetMessages(
 			ctx,
 			[]tg.InputMessageClass{&tg.InputMessageReplyTo{ID: m.ID}},
 		)
@@ -32,7 +35,7 @@ func Tag(ctx context.Context, answer *message.RequestBuilder, m *tg.Message, cli
 		media := mRep.(*tg.MessagesMessages).Messages[0].(*tg.Message).Media
 		if sticker, ok := util.StickerFromMedia(media); ok {
 			// if true, check if it has such a tag, add one if not
-			sTag := database.StickerTag{
+			sTag := db.StickerTag{
 				User:      userID,
 				StickerID: sticker.ID,
 				Tag:       text,
@@ -51,15 +54,10 @@ func Tag(ctx context.Context, answer *message.RequestBuilder, m *tg.Message, cli
 
 	// case 2: message is not a reply
 	// remember the tag and set a waiting-for-a-sticker flag
-	user := database.User{UserID: userID}
-	if _, err := user.Get(); err != nil {
-		answer.Text(ctx, "Что-то пошло не так, попробуйте ещё раз!")
-		return err
-	}
 	if err := user.SetFlag("add-sticker", text); err != nil {
-		answer.Text(ctx, "Что-то пошло не так, попробуйте ещё раз!")
-		return err
+		_, msgErr := answer.Text(ctx, "Что-то пошло не так, попробуйте ещё раз!")
+		return errors.Join(err, msgErr)
 	}
-	_, err := answer.Text(ctx, "Теперь отправьте мне стикер, к которому нужно прикрепить тег")
+	_, err = answer.Text(ctx, "Теперь отправьте мне стикер, к которому нужно прикрепить тег")
 	return err
 }

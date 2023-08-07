@@ -18,6 +18,7 @@ import (
 
 var (
 	botToken    = os.Getenv("BOT_TOKEN")
+	_           = botToken // compiler warning fix
 	sessionFile = os.Getenv("SESSION_FILE")
 	appDomain   = os.Getenv("DOMAIN")
 	appPort     = os.Getenv("APP_PORT")
@@ -45,8 +46,12 @@ func run(ctx context.Context) error {
 				WithUploader(uploader.NewUploader(myClient)).
 				WithDownloader(downloader.NewDownloader())
 			cmdDispatcher.Pre(handlePre())
+			cmdDispatcher.OnNewCommand("start", commands.Start)
 			cmdDispatcher.OnNewCommand("help", commands.Help)
 			cmdDispatcher.OnNewCommand("cancel", commands.Cancel)
+			cmdDispatcher.OnNewCommand("tag", commands.Tag)
+			cmdDispatcher.OnNewCommand("remove", commands.Remove)
+			cmdDispatcher.OnNewCommand("global", commands.Global)
 
 			//dispatcher.OnNewMessage(handleMessages(myClient))
 			dispatcher.OnBotInlineQuery(handleInline(myClient))

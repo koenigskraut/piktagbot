@@ -42,7 +42,7 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *comma
 
 		// get or create user record
 		user := &database.User{UserID: uID}
-		userIsNew, err := user.Get()
+		_, err := user.Get()
 		if err != nil {
 			return err
 		}
@@ -68,40 +68,6 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *comma
 			break
 		}
 
-		// if not, check the message for commands:
-		foundCommand, clearMessage := parseFirstCommand(m)
-		if foundCommand != "" {
-			answer := c.Sender.Answer(entities, u)
-			switch foundCommand {
-			case "start":
-				return commands.Start(ctx, answer, userIsNew)
-			case "help":
-				return commands.Help(ctx, answer)
-			case "global":
-				return commands.Global(ctx, answer, user)
-			case "cancel":
-				return commands.Cancel(ctx, answer)
-			case "tag":
-				return commands.Tag(ctx, answer, m, c.Client, clearMessage)
-			case "remove":
-				return commands.Remove(ctx, answer, m, client)
-			default:
-				return nil
-			}
-		}
-		return nil
+		return commands.ErrNoAction
 	}
-}
-
-func parseFirstCommand(m *tg.Message) (command string, clearMessage string) {
-	for _, e := range m.Entities {
-		if e.TypeName() == "messageEntityBotCommand" {
-			eA := e.(*tg.MessageEntityBotCommand)
-			end := eA.Offset + eA.Length
-			command = m.Message[eA.Offset+1 : end]
-			clearMessage = m.Message[0:eA.Offset] + m.Message[end:]
-			break
-		}
-	}
-	return command, clearMessage
 }

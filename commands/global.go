@@ -4,15 +4,18 @@ package commands
 
 import (
 	"context"
-	"github.com/gotd/td/telegram/message"
+	"errors"
+	"github.com/gotd/td/tg"
 	db "github.com/koenigskraut/piktagbot/database"
 )
 
-func Global(ctx context.Context, answer *message.RequestBuilder, user *db.User) (err error) {
+func Global(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) (err error) {
+	user := c.UserCapture.(*db.User)
+	answer := c.Sender.Answer(e, upd)
 	// can't update DB — notify user
 	if errDB := user.SwitchGlobal(); errDB != nil {
-		answer.Text(ctx, "Произошла какая-то ошибка, попробуйте ещё раз!")
-		return errDB
+		_, msgErr := answer.Text(ctx, "Произошла какая-то ошибка, попробуйте ещё раз!")
+		return errors.Join(errDB, msgErr)
 	}
 
 	// no error, send user status
