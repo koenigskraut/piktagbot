@@ -53,7 +53,7 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 	err := DB.Model(&StickerTag{}).
 		Preload("Sticker").
 		Select("sticker_id, MAX(added) added").
-		Where(&StickerTag{User: u.UserID, AsSet: false}).
+		Where(&StickerTag{User: u.UserID}).
 		Order("added desc").
 		Group("sticker_id").
 		Find(&pre).Error
