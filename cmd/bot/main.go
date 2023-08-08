@@ -40,20 +40,23 @@ func run(ctx context.Context) error {
 		}, func(ctx context.Context, client *telegram.Client) error {
 			myClient := tg.NewClient(client)
 
+			cmdMap := map[string]commands.CommandHandler{
+				"start":  commands.Start,
+				"help":   commands.Help,
+				"cancel": commands.Cancel,
+				"tag":    commands.Tag,
+				"remove": commands.Remove,
+				"global": commands.Global,
+			}
+
 			cmdDispatcher := commands.NewCommandDispatcher(&dispatcher).
 				WithClient(myClient).
 				WithSender(message.NewSender(myClient)).
 				WithUploader(uploader.NewUploader(myClient)).
-				WithDownloader(downloader.NewDownloader())
+				WithDownloader(downloader.NewDownloader()).
+				WithCommands(cmdMap)
 			cmdDispatcher.Pre(handlePre())
-			cmdDispatcher.OnNewCommand("start", commands.Start)
-			cmdDispatcher.OnNewCommand("help", commands.Help)
-			cmdDispatcher.OnNewCommand("cancel", commands.Cancel)
-			cmdDispatcher.OnNewCommand("tag", commands.Tag)
-			cmdDispatcher.OnNewCommand("remove", commands.Remove)
-			cmdDispatcher.OnNewCommand("global", commands.Global)
 
-			//dispatcher.OnNewMessage(handleMessages(myClient))
 			dispatcher.OnBotInlineQuery(handleInline(myClient))
 			dispatcher.OnBotCallbackQuery(handleCallback(myClient))
 			return nil

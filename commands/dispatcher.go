@@ -69,6 +69,13 @@ func NewCommandDispatcher(handler *tg.UpdateDispatcher) CommandDispatcher {
 	return c
 }
 
+func (u CommandDispatcher) WithCommands(commands map[string]CommandHandler) CommandDispatcher {
+	for k, v := range commands {
+		u.handlers[k] = v
+	}
+	return u
+}
+
 func (u CommandDispatcher) WithClient(client *tg.Client) CommandDispatcher {
 	u.capture.Client = client
 	return u
