@@ -59,7 +59,7 @@ func main() {
 	})
 	http.HandleFunc(WebAppHashPath, handleVerification)
 	http.HandleFunc(WebAppWsPath, handleWS)
-	http.Handle(WebAppStickersPath, http.StripPrefix(WebAppStickersPath, http.FileServer(http.Dir(stickerPath))))
+	//http.Handle(WebAppStickersPath, http.StripPrefix(WebAppStickersPath, http.FileServer(http.Dir(stickerPath))))
 	http.HandleFunc(WebAppOrderUpdate, handleOrderUpdate)
 
 	go func() {

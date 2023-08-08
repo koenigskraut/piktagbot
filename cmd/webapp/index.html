@@ -161,7 +161,8 @@
         let webApp = Telegram.WebApp;
         let container = null;
         let stickerNumber = 0;
-        const stickerTypes = {"webp": "s", "tgs": "l", "webm": "v"};
+        const stickerTypesNumeric = {"webp": 0, "tgs": 1, "webm": 2};
+        const stickerTypesTypes = ['image/webp', 'application/json', 'image/webp'];
         webApp.MainButton.text = "Сохранить изменения";
         let animations = {};
         let sessionGlobal = {};
@@ -322,6 +323,7 @@
                 console.log("got " + JSON.stringify(sessionGlobal));
 
                 let socket = new WebSocket(wsPath);
+                socket.binaryType = "arraybuffer";
                 socket.onopen = () => {
                     console.log("socket opened");
                     socket.send(JSON.stringify(sessionGlobal));
@@ -329,35 +331,49 @@
                 };
                 socket.onerror = (ev) => console.error(ev);
                 socket.onmessage = (ev) => {
-                    if (ev.data.startsWith("newFirst")) {
-                        newFirst = (ev.data[10] === "1");
+                    let uint8View = new Uint8Array(ev.data);
+                    if (uint8View.length === 5) {
+                        const startsWith = uint8View.slice(0, 3);
+                        const string = new TextDecoder().decode(startsWith);
+                        if (string !== "nF:") {
+                            console.error("bad string: " + string);
+                        }
+                        newFirst = (uint8View.at(4) > "0".charCodeAt(0));
                         registerRadio(newFirst);
                         return;
                     }
+
                     let elem = document.createElement("div");
                     elem.className = "grid-square";
                     elem.id = "elem" + String(stickerNumber+1);
-                    const stickerID = ev.data.substring(1);
-                    elem.setAttribute("data-sticker-id", stickerID);
-                    if (ev.data[0] === stickerTypes.tgs) {
+                    let uint64View = new BigInt64Array(ev.data.slice(1, 9));
+                    elem.setAttribute("data-sticker-id", uint64View.at(0).toString());
+
+                    const stType = uint8View.at(0);
+                    let blob = new Blob([ev.data.slice(9)], { type: stickerTypesTypes[stType] });
+                    let url = URL.createObjectURL(blob);
+                    if (stType !== stickerTypesNumeric.tgs) {
+                        console.log("webp/webm");
+                        let elemChild = document.createElement("img");
+                        elemChild.src = url;
+                        elemChild.className = "square-img";
+                        // elemChild.onload = (_) => URL.revokeObjectURL(url);
+                        elem.appendChild(elemChild);
+                    } else {
                         animations[elem.id] = bodymovin.loadAnimation({
                             container: elem,
                             renderer: 'svg',
                             loop: false,
                             autoplay: false,
-                            path: "/stickers/" + stickerID,
+                            path: url,
                             rendererSettings: {
                                 className: 'square-img',
                                 progressiveLoad: true,
                             }
                         });
-                    } else {
-                        let elemChild = document.createElement("img");
-                        elemChild.src = "/stickers/" + stickerID;
-                        elemChild.className = "square-img";
-                        elem.appendChild(elemChild);
+                        URL.revokeObjectURL(url);
                     }
-                    container.appendChild(elem)
+                    container.appendChild(elem);
                     stickerNumber++;
                 };
                 socket.onclose = () => {

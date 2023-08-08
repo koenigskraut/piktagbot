@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/binary"
+	"errors"
 	"fmt"
+	"github.com/gobwas/ws/wsutil"
 	"github.com/gotd/td/telegram/downloader"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/database"
@@ -11,7 +16,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -20,20 +27,26 @@ type downloadedMap struct {
 	sync.RWMutex
 }
 
-func (dm *downloadedMap) init(path string) {
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		n, err := strconv.ParseInt(entry.Name(), 10, 64)
+func (dm *downloadedMap) init(filePath string) {
+	for _, suffix := range [][2]string{{"", ".webp"}, {"json", ".json"}} {
+		entries, err := os.ReadDir(path.Join(filePath, suffix[0]))
 		if err != nil {
 			log.Fatal(err)
 		}
-		dm.add(n)
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if !strings.HasSuffix(name, suffix[1]) {
+				continue
+			}
+			n, err := strconv.ParseInt(name[:len(name)-len(suffix[1])], 10, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+			dm.add(n)
+		}
 	}
 }
 
@@ -57,8 +70,9 @@ type InputDocumentMimeTyped struct {
 }
 
 type receiveFiles struct {
-	files []InputDocumentMimeTyped
-	ch    chan string
+	files  []InputDocumentMimeTyped
+	output *wsutil.Writer
+	ch     chan error
 }
 
 var downloadChan = make(chan *receiveFiles)
@@ -70,67 +84,146 @@ func downloadLoop(ch chan *receiveFiles, ctx context.Context, tgClient *tg.Clien
 	}
 }
 
-const prefix = `slv`
+const webpPathFmt = "%s/%d.webp"
+const webmPathFmt = "%s/webm/%d.webm"
+const tgsPathFmt = "%s/tgs/%d.tgs"
+const jsonPathFmt = "%s/json/%d.json"
+
+var pathFmtInitial = []string{webpPathFmt, tgsPathFmt, webmPathFmt}
+var pathFmtFinal = []string{webpPathFmt, jsonPathFmt, webpPathFmt}
+
+func writeHeader(w io.Writer, file InputDocumentMimeTyped) error {
+	if _, err := w.Write([]byte{byte(file.mimeType)}); err != nil {
+		return err
+	}
+	return binary.Write(w, binary.LittleEndian, file.doc.ID)
+}
+
+func downloadWebp(ctx context.Context, api *tg.Client,
+	doc *tg.InputDocumentFileLocation, d *downloader.Downloader,
+	path string, out io.Writer,
+) error {
+	fileWebp, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	writerWebp := io.MultiWriter(out, fileWebp)
+	_, err = d.Download(api, doc).Stream(ctx, writerWebp)
+	return err
+}
+
+func downloadTgs(ctx context.Context, api *tg.Client,
+	doc *tg.InputDocumentFileLocation, d *downloader.Downloader,
+	pathInitial, pathFinal string, out io.Writer,
+) error {
+	bufTgs := &bytes.Buffer{}
+	bufTgsWriter := bufio.NewWriterSize(bufTgs, 256*1024)
+	fileTgs, err := os.Create(pathInitial)
+	if err != nil {
+		return err
+	}
+	tgsWriter := io.MultiWriter(bufTgsWriter, fileTgs)
+	if _, err := d.Download(api, doc).Stream(ctx, tgsWriter); err != nil {
+		return err
+	}
+	if err := bufTgsWriter.Flush(); err != nil {
+		return err
+	}
+	if err := fileTgs.Close(); err != nil {
+		return err
+	}
+
+	gzReader, err := gzip.NewReader(bufTgs)
+	if err != nil {
+		return err
+	}
+	fileJson, err := os.Create(pathFinal)
+	if err != nil {
+		return err
+	}
+	jsonWriter := io.MultiWriter(out, fileJson)
+	if _, err := io.Copy(jsonWriter, gzReader); err != nil {
+		return err
+	}
+	if err := fileJson.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func downloadWebm(ctx context.Context, api *tg.Client,
+	doc *tg.InputDocumentFileLocation, d *downloader.Downloader,
+	pathInitial, pathFinal string, out io.Writer,
+) error {
+	_, err := d.Download(api, doc).ToPath(ctx, pathInitial)
+	if err != nil {
+		return err
+	}
+	// yeah.. i know
+	err = exec.Command("ffmpeg", "-y", "-vcodec", "libvpx-vp9", "-i", pathInitial,
+		"-vframes", "1", "-f", "webp", pathFinal).Run()
+	if err != nil {
+		return err
+	}
+	fileWebp, err := os.Open(pathFinal)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(out, fileWebp)
+	return err
+}
 
 func downloadAll(ctx context.Context, api *tg.Client, d *downloader.Downloader, r *receiveFiles) {
 	defer close(r.ch)
+	writer := r.output
 	for _, file := range r.files {
-		if !downloaded.peek(file.doc.ID) {
-			webpPath := fmt.Sprintf("%s/%d", stickerPath, file.doc.ID)
-			switch file.mimeType {
-			case database.MimeTypeWebp:
-				_, err := d.Download(api, file.doc).ToPath(ctx, webpPath)
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-			case database.MimeTypeWebm:
-				webmPath := fmt.Sprintf("%s/webm/%d", stickerPath, file.doc.ID)
-				_, err := d.Download(api, file.doc).ToPath(ctx, webmPath)
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-				// yeah.. i know
-				err = exec.Command("ffmpeg", "-y", "-vcodec", "libvpx-vp9", "-i", webmPath,
-					"-vframes", "1", "-f", "webp", webpPath).Run()
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-			case database.MimeTypeTgs:
-				tgsPath := fmt.Sprintf("%s/tgs/%d.tgs", stickerPath, file.doc.ID)
-				_, err := d.Download(api, file.doc).ToPath(ctx, tgsPath)
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-				fileIn, err := os.Open(tgsPath)
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-				reader, err := gzip.NewReader(fileIn)
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-				jsonPath := fmt.Sprintf("%s/%d", stickerPath, file.doc.ID)
-				fileOut, err := os.Create(jsonPath)
-				if err != nil {
-					r.ch <- "404"
-					continue
-				}
-				if _, err := io.Copy(fileOut, reader); err != nil {
-					r.ch <- "404"
-					continue
-				}
-				fileOut.Close()
-				reader.Close()
-				fileIn.Close()
-			}
-			downloaded.add(file.doc.ID)
+		var err error
+
+		if err := writeHeader(writer, file); err != nil {
+			r.ch <- err
+			return
 		}
-		r.ch <- string(prefix[file.mimeType]) + strconv.FormatInt(file.doc.ID, 10)
+
+		finalPath := fmt.Sprintf(pathFmtFinal[file.mimeType], stickerPath, file.doc.ID)
+		// if file exist, write to channel writer
+		if downloaded.peek(file.doc.ID) {
+			localFile, err := os.Open(finalPath)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			if _, err := io.Copy(writer, localFile); err != nil {
+				r.ch <- err
+				return
+			}
+			_ = localFile.Close()
+			if err := writer.Flush(); err != nil {
+				r.ch <- err
+				return
+			}
+			continue
+		}
+
+		initialPath := fmt.Sprintf(pathFmtInitial[file.mimeType], stickerPath, file.doc.ID)
+		switch file.mimeType {
+		case database.MimeTypeWebp:
+			err = downloadWebp(ctx, api, file.doc, d, initialPath, writer)
+		case database.MimeTypeTgs:
+			err = downloadTgs(ctx, api, file.doc, d, initialPath, finalPath, writer)
+		case database.MimeTypeWebm:
+			err = downloadWebm(ctx, api, file.doc, d, initialPath, finalPath, writer)
+		default:
+			err = errors.New("unknown mime type")
+		}
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		downloaded.add(file.doc.ID)
+		if err := writer.Flush(); err != nil {
+			r.ch <- err
+			return
+		}
 	}
+	r.ch <- nil
 }

@@ -92,24 +92,30 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		if newFirstBool {
-			newFirst = []byte("newFirst: 1")
+			newFirst = []byte("nF: 1")
 		} else {
-			newFirst = []byte("newFirst: 0")
+			newFirst = []byte("nF: 0")
 		}
 
-		myChan := make(chan string)
+		writer := wsutil.NewWriterSize(conn, ws.StateServerSide, ws.OpBinary, 4096)
+		myChan := make(chan error)
 		myFiles := receiveFiles{
-			files: locations,
-			ch:    myChan,
+			files:  locations,
+			ch:     myChan,
+			output: writer,
+		}
+		if err := wsutil.WriteServerBinary(conn, newFirst); err != nil {
+			log.Println(err)
+			return
 		}
 		downloadChan <- &myFiles
-		if err := wsutil.WriteServerText(conn, newFirst); err != nil {
-			log.Println(3, err)
-		}
-		for r := range myChan {
-			if err := wsutil.WriteServerText(conn, []byte(r)); err != nil {
-				log.Println(3, err)
+		if err1 := <-myChan; err1 != nil {
+			log.Println(err1)
+			if err2 := wsutil.WriteServerText(conn, []byte(fmt.Sprintf("error: %+v", err1))); err2 != nil {
+				log.Println(err2)
 			}
+			return
 		}
+		writer.Flush()
 	}()
 }
