@@ -48,31 +48,14 @@ func (u *User) SetFlag(flag, flagData string) (err error) {
 	return
 }
 
-// TODO order stuff
-//func (u *User) WriteTagOrder(tagOrder []uint64) (err error) {
-//	buf := &bytes.Buffer{}
-//	err = binary.Write(buf, binary.LittleEndian, tagOrder)
-//	if err != nil {
-//		return
-//	}
-//	u.TagOrder = buf.Bytes()
-//	err = DB.Save(u).Error
-//	return
-//}
-
-// TODO order stuff
-//func (u *User) ReadTagOrder() (tagOrder []uint64, err error) {
-//	tagOrder = make([]uint64, len(u.TagOrder)/8)
-//	buf := bytes.NewReader(u.TagOrder)
-//	err = binary.Read(buf, binary.LittleEndian, tagOrder)
-//	return
-//}
-
 func (u *User) RecentStickers() ([]*StickerTag, error) {
 	var pre []*StickerTag
-	err := DB.Preload("Sticker").
-		Where(&StickerTag{User: u.UserID}).
+	err := DB.Model(&StickerTag{}).
+		Preload("Sticker").
+		Select("sticker_id, MAX(added) added").
+		Where(&StickerTag{User: u.UserID, AsSet: false}).
 		Order("added desc").
+		Group("sticker_id").
 		Find(&pre).Error
 	if err != nil {
 		return nil, err
@@ -81,13 +64,20 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 	if err != nil {
 		return nil, err
 	}
-	return uniqueAndSorted(pre, order)
+	err = stickersSort(pre, order)
+	if err != nil {
+		return nil, err
+	}
+	return pre, nil
 }
 
 func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 	query := DB.Preload("Sticker").
+		Select("sticker_id, MAX(added) added").
 		Order("added desc").
-		Where("tag LIKE ?", prefix+"%")
+		Where("tag LIKE ?", prefix+"%").
+		Order("added desc").
+		Group("sticker_id")
 	if u.GlobalTag {
 		query = query.Where("user IN (?, 0)", u.UserID)
 	} else {
@@ -101,7 +91,11 @@ func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 	if err != nil {
 		return nil, err
 	}
-	return uniqueAndSorted(pre, order)
+	err = stickersSort(pre, order)
+	if err != nil {
+		return nil, err
+	}
+	return pre, nil
 }
 
 func (u *User) GetOrder(prefix string) (*StickerOrder, error) {
