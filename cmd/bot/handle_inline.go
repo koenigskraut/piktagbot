@@ -18,6 +18,10 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 	return func(ctx context.Context, entities tg.Entities, update *tg.UpdateBotInlineQuery) (err error) {
 		var q []*db.StickerTag
 
+		const limit = 50
+		offset, _ := strconv.ParseInt(update.Offset, 10, 32)
+		nextOffset := ""
+
 		u := db.User{UserID: update.UserID}
 		if e := u.Get(); e != nil {
 			return e
@@ -30,6 +34,11 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		if err != nil {
 			return err
 		}
+		q = q[offset:]
+		if len(q) > limit {
+			q = q[:limit]
+			nextOffset = strconv.FormatInt(offset+limit, 10)
+		}
 
 		as := make([]inline.ResultOption, len(q))
 		for i, st := range q {
@@ -41,7 +50,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 			)
 		}
 
-		w := sender.Inline(update).CacheTimeSeconds(0).NextOffset("").Gallery(true)
+		w := sender.Inline(update).CacheTimeSeconds(0).NextOffset(nextOffset).Gallery(true)
 		webAppUser := &webapp.User{}
 		for _, e := range entities.Users {
 			if e.ID == update.UserID {
@@ -61,18 +70,14 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 			return err
 		}
 		URL := fmt.Sprintf("https://%s:%s?%s", appDomain, appPort, string(signed))
-
-		if len(as) > 0 {
-			if len(as) > 50 {
-				as = as[:50]
-			}
-			if _, err := w.SwitchWebview("Изменить порядок стикеров", URL).Set(ctx, as...); err != nil {
-				return err
-			}
-		} else {
-			_, err := w.SwitchPM("Начать создавать теги!", "a").Set(ctx)
-			return err
+		switch len(as) {
+		case 0:
+			_, err = w.SwitchPM("Начать создавать теги!", "").Set(ctx)
+		case 1:
+			_, err = w.SwitchPM("Добавить теги!", "").Set(ctx)
+		default:
+			_, err = w.SwitchWebview("Изменить порядок стикеров", URL).Set(ctx, as...)
 		}
-		return nil
+		return err
 	}
 }

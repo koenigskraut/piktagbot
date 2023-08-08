@@ -64,6 +64,7 @@ func (u *User) RecentStickers() ([]*StickerTag, error) {
 		Where(&StickerTag{User: u.UserID}).
 		Order("added desc").
 		Group("sticker_id").
+		Limit(500).
 		Find(&pre).Error
 	if err != nil {
 		return nil, err
@@ -85,7 +86,8 @@ func (u *User) SearchStickers(prefix string) ([]*StickerTag, error) {
 		Order("added desc").
 		Where("tag LIKE ?", prefix+"%").
 		Order("added desc").
-		Group("sticker_id")
+		Group("sticker_id").
+		Limit(500)
 	if u.GlobalTag {
 		query = query.Where("user IN (?, 0)", u.UserID)
 	} else {
