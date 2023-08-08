@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/downloader"
@@ -57,22 +56,7 @@ func run(ctx context.Context) error {
 				WithDownloader(downloader.NewDownloader()).
 				WithCommands(cmdMap)
 			cmdDispatcher.Pre(handlePre())
-			cmdDispatcher.Post(func(_ context.Context, _ tg.Entities, upd *tg.UpdateNewMessage, c *cmd.HelperCapture) error {
-				ne, ok := upd.GetMessage().AsNotEmpty()
-				if !ok {
-					return errors.New("empty message")
-				}
-				semaphore := c.UserCapture.(*cmd.MessageSemaphore)
-				var lockedUser *cmd.UserUnderLock
-				switch v := ne.GetPeerID().(type) {
-				case *tg.PeerUser:
-					lockedUser = semaphore.GetCurrentLock(v.UserID)
-				default:
-					return errors.New("not a user chat")
-				}
-				lockedUser.Unlock()
-				return nil
-			})
+			cmdDispatcher.Post(handlePost)
 
 			dispatcher.OnBotInlineQuery(handleInline(myClient))
 			dispatcher.OnBotCallbackQuery(handleCallback(myClient))

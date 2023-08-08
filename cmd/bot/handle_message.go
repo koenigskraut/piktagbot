@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/gotd/td/tg"
 	cmd "github.com/koenigskraut/piktagbot/commands"
 	db "github.com/koenigskraut/piktagbot/database"
@@ -56,4 +57,21 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *cmd.H
 
 		return cmd.ErrNoAction
 	}
+}
+
+func handlePost(_ context.Context, _ tg.Entities, upd *tg.UpdateNewMessage, c *cmd.HelperCapture) error {
+	ne, ok := upd.GetMessage().AsNotEmpty()
+	if !ok {
+		return errors.New("empty message")
+	}
+	semaphore := c.UserCapture.(*cmd.MessageSemaphore)
+	var lockedUser *cmd.UserUnderLock
+	switch v := ne.GetPeerID().(type) {
+	case *tg.PeerUser:
+		lockedUser = semaphore.GetCurrentLock(v.UserID)
+	default:
+		return errors.New("not a user chat")
+	}
+	lockedUser.Unlock()
+	return nil
 }
