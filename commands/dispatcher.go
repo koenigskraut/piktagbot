@@ -9,15 +9,17 @@ import (
 	"github.com/gotd/td/tg"
 )
 
-type CommandHandler func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture) error
+type PrePostDefHandler func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture) error
+type CommandHandler func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture, string) error
 
 type preDefaultHandlers struct {
-	pre CommandHandler
-	def CommandHandler
+	pre  PrePostDefHandler
+	post PrePostDefHandler
+	def  PrePostDefHandler
 }
 
 // HelperCapture contains API client and various helpers that can be provided to CommandDispatcher by With*()
-// method.
+// method. Not intended to be used directly, only for field access.
 //
 // Example (updatesDispatcher is tg.UpdateDispatcher, client is *telegram.Client):
 //
@@ -38,20 +40,23 @@ type HelperCapture struct {
 	Sender      *message.Sender
 	Uploader    *uploader.Uploader
 	Downloader  *downloader.Downloader
-	Clear       string
 	UserCapture any
 }
 
-// CommandDispatcher f
+// CommandDispatcher is a bot message handling dispatcher that also contains a capture with helpers and arbitrary
+// user data (HelperCapture.UserCapture)
 type CommandDispatcher struct {
-	handlers   map[string]CommandHandler
-	preDefault *preDefaultHandlers
-	capture    *HelperCapture
+	handlers       map[string]CommandHandler
+	prePostDefault *preDefaultHandlers
+	capture        *HelperCapture
 }
 
 // ErrNoAction is a signal that message was not consumed by pre handler, returning it is the default and intended
 // behaviour, use it in your custom pre handler.
 var ErrNoAction = errors.New("no action")
+
+// ErrDoNotProcess signalize that message was not processed, so Post won't be executed. useful if there is some cleanup in Post handler
+var ErrDoNotProcess = errors.New("message is skipped")
 
 // NewCommandDispatcher creates new bot dispatcher and attaches itself to the provided tg.UpdateDispatcher.
 // If it is not the intended behaviour, you can provide nil as an argument and get message handler with
@@ -59,7 +64,7 @@ var ErrNoAction = errors.New("no action")
 func NewCommandDispatcher(handler *tg.UpdateDispatcher) CommandDispatcher {
 	c := CommandDispatcher{
 		handlers: map[string]CommandHandler{},
-		preDefault: &preDefaultHandlers{
+		prePostDefault: &preDefaultHandlers{
 			pre: func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture) error { return ErrNoAction },
 			def: func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture) error { return nil },
 		},
@@ -97,15 +102,21 @@ func (u CommandDispatcher) WithDownloader(downloader *downloader.Downloader) Com
 	return u
 }
 
-// Default sets-up a handler, that will be executed if no commands are recognized.
-func (u CommandDispatcher) Default(handler CommandHandler) CommandDispatcher {
-	u.preDefault.def = handler
+// Pre sets-up a handler, that will be executed before any command is parsed, default behaviour: return ErrNoAction.
+func (u CommandDispatcher) Pre(handler PrePostDefHandler) CommandDispatcher {
+	u.prePostDefault.pre = handler
 	return u
 }
 
-// Pre sets-up a handler, that will be executed before any command is parsed, default behaviour: return ErrNoAction.
-func (u CommandDispatcher) Pre(handler CommandHandler) CommandDispatcher {
-	u.preDefault.pre = handler
+// Post sets-up a handler, that will be executed after all handlers
+func (u CommandDispatcher) Post(handler PrePostDefHandler) CommandDispatcher {
+	u.prePostDefault.post = handler
+	return u
+}
+
+// Default sets-up a handler, that will be executed if no commands are recognized.
+func (u CommandDispatcher) Default(handler PrePostDefHandler) CommandDispatcher {
+	u.prePostDefault.def = handler
 	return u
 }
 
@@ -119,7 +130,7 @@ func (u CommandDispatcher) NewMessageHandler(ctx context.Context, e tg.Entities,
 	return u.dispatch(ctx, e, update)
 }
 
-func (u CommandDispatcher) dispatch(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
+func (u CommandDispatcher) dispatch(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) (err error) {
 	if update == nil {
 		return nil
 	}
@@ -127,20 +138,34 @@ func (u CommandDispatcher) dispatch(ctx context.Context, e tg.Entities, update *
 	if !ok {
 		return nil
 	}
-	// either read error occurred or update was consumed (nil), return in both cases
-	if err := u.preDefault.pre(ctx, e, update, u.capture); !errors.Is(err, ErrNoAction) {
-		return err
+
+	preErr := u.prePostDefault.pre(ctx, e, update, u.capture)
+	switch preErr {
+	case ErrDoNotProcess: // not a message of interest, immediate return
+		return nil
+	case ErrNoAction: // normal behaviour, defer post, continue
+		defer func() {
+			postErr := u.prePostDefault.post(ctx, e, update, u.capture)
+			err = errors.Join(err, postErr)
+		}()
+	case nil: // message consumed by pre, execute post & return
+		return u.prePostDefault.post(ctx, e, update, u.capture)
+	default: // other error, execute post anyway, join errors and return
+		postErr := u.prePostDefault.post(ctx, e, update, u.capture)
+		return errors.Join(preErr, postErr)
 	}
+
 	cmd, ok := readFirstCommand(msg)
 	if !ok {
-		return u.preDefault.def(ctx, e, update, u.capture)
+		return u.prePostDefault.def(ctx, e, update, u.capture)
 	}
 	handler, ok := u.handlers[cmd.command]
 	if !ok {
-		handler = u.preDefault.def
+		err = u.prePostDefault.def(ctx, e, update, u.capture)
+	} else {
+		err = handler(ctx, e, update, u.capture, cmd.clear)
 	}
-	u.capture.Clear = cmd.clear
-	return handler(ctx, e, update, u.capture)
+	return
 }
 
 type readCommand struct {

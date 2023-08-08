@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/downloader"
 	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/telegram/uploader"
 	"github.com/gotd/td/tg"
-	"github.com/koenigskraut/piktagbot/commands"
+	cmd "github.com/koenigskraut/piktagbot/commands"
 	db "github.com/koenigskraut/piktagbot/database"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -40,22 +41,38 @@ func run(ctx context.Context) error {
 		}, func(ctx context.Context, client *telegram.Client) error {
 			myClient := tg.NewClient(client)
 
-			cmdMap := map[string]commands.CommandHandler{
-				"start":  commands.Start,
-				"help":   commands.Help,
-				"cancel": commands.Cancel,
-				"tag":    commands.Tag,
-				"remove": commands.Remove,
-				"global": commands.Global,
+			cmdMap := map[string]cmd.CommandHandler{
+				"start":  cmd.Start,
+				"help":   cmd.Help,
+				"cancel": cmd.Cancel,
+				"tag":    cmd.Tag,
+				"remove": cmd.Remove,
+				"global": cmd.Global,
 			}
 
-			cmdDispatcher := commands.NewCommandDispatcher(&dispatcher).
+			cmdDispatcher := cmd.NewCommandDispatcher(&dispatcher).
 				WithClient(myClient).
 				WithSender(message.NewSender(myClient)).
 				WithUploader(uploader.NewUploader(myClient)).
 				WithDownloader(downloader.NewDownloader()).
 				WithCommands(cmdMap)
 			cmdDispatcher.Pre(handlePre())
+			cmdDispatcher.Post(func(_ context.Context, _ tg.Entities, upd *tg.UpdateNewMessage, c *cmd.HelperCapture) error {
+				ne, ok := upd.GetMessage().AsNotEmpty()
+				if !ok {
+					return errors.New("empty message")
+				}
+				semaphore := c.UserCapture.(*cmd.MessageSemaphore)
+				var lockedUser *cmd.UserUnderLock
+				switch v := ne.GetPeerID().(type) {
+				case *tg.PeerUser:
+					lockedUser = semaphore.GetCurrentLock(v.UserID)
+				default:
+					return errors.New("not a user chat")
+				}
+				lockedUser.Unlock()
+				return nil
+			})
 
 			dispatcher.OnBotInlineQuery(handleInline(myClient))
 			dispatcher.OnBotCallbackQuery(handleCallback(myClient))
