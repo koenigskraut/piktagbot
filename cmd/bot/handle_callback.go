@@ -16,8 +16,16 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 	return func(ctx context.Context, e tg.Entities, update *tg.UpdateBotCallbackQuery) (err error) {
 		var message string
 
-		if update.Data[0] == callback.ActionNone {
+		switch update.Data[0] {
+		case callback.ActionNone:
 			return answerCallback(ctx, update.QueryID, message, client)
+		case callback.ActionDone:
+			_, err = client.MessagesEditMessage(ctx, &tg.MessagesEditMessageRequest{
+				Peer:    &tg.InputPeerUser{UserID: update.UserID},
+				ID:      update.MsgID,
+				Message: "Изменения сохранены!",
+			})
+			return err
 		}
 
 		page := binary.LittleEndian.Uint16(update.Data[len(update.Data)-2:])
@@ -28,7 +36,7 @@ func handleCallback(client *tg.Client) func(context.Context, tg.Entities, *tg.Up
 			stickerID = binary.LittleEndian.Uint64(update.Data[1:9])
 		}
 		userID := update.UserID
-		var markup *tg.ReplyInlineMarkup
+		var markup tg.ReplyMarkupClass
 
 		switch update.Data[0] {
 		case callback.ActionRemove:

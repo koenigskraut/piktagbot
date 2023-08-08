@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func Remove(m *tg.Message, u *database.User) (string, *tg.ReplyInlineMarkup) {
+func Remove(m *tg.Message, u *database.User) (string, tg.ReplyMarkupClass) {
 	if strings.HasPrefix(m.Message, "/cancel") {
 		database.DB.Model(&u).Select("Flag", "FlagData").Updates(database.User{Flag: "", FlagData: ""})
 		return "Действие отменено", nil
