@@ -6,9 +6,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/gotd/td/telegram/message/markup"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/database"
 )
+
+const maxElementsOnPage = 10
 
 const (
 	ActionNone = iota
@@ -17,6 +20,16 @@ const (
 	ActionForward
 	ActionBegin
 	ActionEnd
+	ActionDone
+)
+
+const (
+	TextNone     = "⏺"
+	TextBegin    = "⏮"
+	TextBackward = "⬅"
+	TextForward  = "➡"
+	TextEnd      = "⏭"
+	TextDone     = "Готово"
 )
 
 var MarkupError = errors.New("markup build: no tags found")
@@ -46,7 +59,7 @@ func preparePage(code int, docID uint64, page uint16) []byte {
 
 // BuildMarkup renders buttons for tag deletion for a given
 // sticker (docID) and user (userID), stopping on a given page
-func BuildMarkup(stickerID uint64, userID int64, page uint16) (*tg.ReplyInlineMarkup, error) {
+func BuildMarkup(stickerID uint64, userID int64, page uint16) (tg.ReplyMarkupClass, error) {
 	// get tags for a given sticker
 	tags, err := (&database.StickerTag{User: userID, StickerID: stickerID}).GetAllForUser()
 	//tags, err := getStickerTags(docID, userID)
@@ -58,69 +71,70 @@ func BuildMarkup(stickerID uint64, userID int64, page uint16) (*tg.ReplyInlineMa
 	if tagLen == 0 {
 		return nil, MarkupError
 	}
-	markup := &tg.ReplyInlineMarkup{}
-	pages := (tagLen - 1) / 8
+	const tagsOnPage = 7
+	pages := (tagLen - 1) / tagsOnPage
 	// if we are on a page that no longer exists, fix it
 	if int(page) > pages {
 		page = uint16(pages)
 	}
+	var rows []tg.KeyboardButtonRow
 	// if we don't need nav buttons
 	if tagLen < 11 {
-		markup.Rows = make([]tg.KeyboardButtonRow, tagLen)
+		rows = make([]tg.KeyboardButtonRow, tagLen)
 		for i := range tags {
 			b := prepareTagID(tags[i].ID, stickerID, 0)
-			button := &tg.KeyboardButtonCallback{Text: tags[i].Tag, Data: b}
-			markup.Rows[i] = tg.KeyboardButtonRow{Buttons: []tg.KeyboardButtonClass{button}}
+			button := markup.Callback(tags[i].Tag, b)
+			rows[i] = markup.Row(button)
 		}
+		return markup.InlineKeyboard(rows...), nil
+	}
+	// if we do need them
+	relevantTags := tags[page*tagsOnPage:]
+	if len(relevantTags) > tagsOnPage {
+		relevantTags = relevantTags[:tagsOnPage]
+	}
+	// can't think of anything more elegant, could use map or slice,
+	// but it's not worth it
+	var first, backward, forward, last tg.KeyboardButtonClass
+
+	if page > 1 {
+		first = markup.Callback(TextBegin, preparePage(ActionBegin, stickerID, page))
+		backward = markup.Callback(TextBackward, preparePage(ActionBackward, stickerID, page))
 	} else {
-		// if we do need them
-		relevantTags := tags[page*8:]
-		if len(relevantTags) > 8 {
-			relevantTags = relevantTags[:8]
-		}
-
-		// can't think of anything more elegant, could use map or slice,
-		// but it's not worth it
-		var first, backward, forward, last tg.KeyboardButtonClass
-
-		if page > 1 {
-			first = &tg.KeyboardButtonCallback{Text: "⏮", Data: preparePage(ActionBegin, stickerID, page)}
-			backward = &tg.KeyboardButtonCallback{Text: "⬅️", Data: preparePage(ActionBackward, stickerID, page)}
+		first = markup.Callback(TextNone, []byte{ActionNone})
+		if page > 0 {
+			backward = markup.Callback(TextBackward, preparePage(ActionBackward, stickerID, page))
 		} else {
-			first = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
-			if page > 0 {
-				backward = &tg.KeyboardButtonCallback{Text: "⬅️", Data: preparePage(ActionBackward, stickerID, page)}
-			} else {
-				backward = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
-			}
-		}
-
-		if pages-int(page) > 1 {
-			last = &tg.KeyboardButtonCallback{Text: "⏭", Data: preparePage(ActionEnd, stickerID, page)}
-			forward = &tg.KeyboardButtonCallback{Text: "➡️", Data: preparePage(ActionForward, stickerID, page)}
-		} else {
-			last = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
-			if pages > int(page) {
-				forward = &tg.KeyboardButtonCallback{Text: "➡️", Data: preparePage(ActionForward, stickerID, page)}
-			} else {
-				forward = &tg.KeyboardButtonCallback{Text: "⏺", Data: []byte{ActionNone}}
-			}
-		}
-
-		navButtons := []tg.KeyboardButtonClass{
-			first, backward,
-			&tg.KeyboardButtonCallback{Text: fmt.Sprintf("%d / %d", page+1, pages+1), Data: []byte{ActionNone}},
-			forward, last,
-		}
-
-		markup.Rows = make([]tg.KeyboardButtonRow, 2+len(relevantTags))
-		markup.Rows[0] = tg.KeyboardButtonRow{Buttons: navButtons}
-		markup.Rows[len(relevantTags)+1] = tg.KeyboardButtonRow{Buttons: navButtons}
-		for i := 0; i < len(relevantTags); i++ {
-			b := prepareTagID(relevantTags[i].ID, stickerID, page)
-			button := &tg.KeyboardButtonCallback{Text: relevantTags[i].Tag, Data: b}
-			markup.Rows[i+1] = tg.KeyboardButtonRow{Buttons: []tg.KeyboardButtonClass{button}}
+			backward = markup.Callback(TextNone, []byte{ActionNone})
 		}
 	}
-	return markup, nil
+
+	if pages-int(page) > 1 {
+		last = markup.Callback(TextEnd, preparePage(ActionEnd, stickerID, page))
+		forward = markup.Callback(TextForward, preparePage(ActionForward, stickerID, page))
+	} else {
+		last = markup.Callback(TextNone, []byte{ActionNone})
+		if pages > int(page) {
+			forward = markup.Callback(TextForward, preparePage(ActionForward, stickerID, page))
+		} else {
+			forward = markup.Callback(TextNone, []byte{ActionNone})
+		}
+	}
+
+	navButtons := markup.Row(
+		first, backward,
+		markup.Callback(fmt.Sprintf("%d / %d", page+1, pages+1), []byte{ActionNone}),
+		forward, last,
+	)
+	doneRow := markup.Row(markup.Callback(TextDone, []byte{ActionDone}))
+
+	rows = make([]tg.KeyboardButtonRow, 0, (maxElementsOnPage-tagsOnPage)+len(relevantTags))
+	rows = append(rows, navButtons)
+	for _, t := range relevantTags {
+		b := prepareTagID(t.ID, stickerID, page)
+		button := markup.Callback(t.Tag, b)
+		rows = append(rows, markup.Row(button))
+	}
+	rows = append(rows, navButtons, doneRow)
+	return markup.InlineKeyboard(rows...), nil
 }

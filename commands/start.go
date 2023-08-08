@@ -7,7 +7,7 @@ import (
 	"github.com/gotd/td/tg"
 )
 
-//go:embed startMessage.txt
+//go:embed start_message.txt
 var StartMessage string
 
 func Start(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) (err error) {
