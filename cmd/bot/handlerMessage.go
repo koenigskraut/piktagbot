@@ -3,50 +3,36 @@ package main
 import (
 	"context"
 	"github.com/gotd/td/tg"
-	"github.com/koenigskraut/piktagbot/commands"
-	"github.com/koenigskraut/piktagbot/database"
+	cmd "github.com/koenigskraut/piktagbot/commands"
+	db "github.com/koenigskraut/piktagbot/database"
 	"github.com/koenigskraut/piktagbot/flags"
-	"sync"
 )
 
-func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *commands.HelperCapture) error {
-	messageSemaphore := struct {
-		sync.Mutex
-		data map[int64]*sync.Mutex
-	}{
-		data: map[int64]*sync.Mutex{},
-	}
-	return func(ctx context.Context, entities tg.Entities, u *tg.UpdateNewMessage, c *commands.HelperCapture) error {
+func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *cmd.HelperCapture) error {
+	semaphore := cmd.NewMessageSemaphore()
+	return func(ctx context.Context, entities tg.Entities, u *tg.UpdateNewMessage, c *cmd.HelperCapture) error {
+		c.UserCapture = &semaphore
 		m, ok := u.Message.(*tg.Message)
 		// if there is an error or a message is outgoing/non-pm
 		if !ok || m.Out || m.PeerID.TypeName() != "peerUser" {
-			return nil
+			return cmd.ErrDoNotProcess
 		}
 		uID := m.PeerID.(*tg.PeerUser).UserID
-		var currentLock *sync.Mutex
 
 		// for every peer a new mutex is generated, mutexes are stored in a map
 		// under the common map mutex
-		messageSemaphore.Lock()
-		if v, ok := messageSemaphore.data[uID]; !ok {
-			currentLock = &sync.Mutex{}
-			messageSemaphore.data[uID] = currentLock
-		} else {
-			currentLock = v
-		}
-		messageSemaphore.Unlock()
+		lockedUser := semaphore.GetCurrentLock(uID)
 
-		// for this bot it is crucial to process messages synchronously
-		currentLock.Lock()
-		defer currentLock.Unlock()
+		// for this bot it is crucial to process messages synchronously for each user
+		lockedUser.Lock()
 
 		// get or create user record
-		user := &database.User{UserID: uID}
+		user := &db.User{UserID: uID}
 		_, err := user.Get()
 		if err != nil {
 			return err
 		}
-		c.UserCapture = user
+		lockedUser.DBUser = user
 
 		// TODO get rid of strings, use enum-like constants, rework flag system
 		// are we waiting for something from user?
@@ -68,6 +54,6 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *comma
 			break
 		}
 
-		return commands.ErrNoAction
+		return cmd.ErrNoAction
 	}
 }
