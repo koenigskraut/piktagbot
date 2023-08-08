@@ -9,8 +9,13 @@ import (
 	"github.com/gotd/td/tg"
 )
 
-type PrePostDefHandler func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture) error
-type CommandHandler func(context.Context, tg.Entities, *tg.UpdateNewMessage, *HelperCapture, string) error
+// PrePostDefHandler is a pre, post or default message handler.
+type PrePostDefHandler func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage,
+	capture *HelperCapture) error
+
+// CommandHandler is a command handler.
+type CommandHandler func(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage,
+	capture *HelperCapture, clear string) error
 
 type preDefaultHandlers struct {
 	pre  PrePostDefHandler
@@ -44,21 +49,23 @@ type HelperCapture struct {
 }
 
 // CommandDispatcher is a bot message handling dispatcher that also contains a capture with helpers and arbitrary
-// user data (HelperCapture.UserCapture)
+// user data (HelperCapture.UserCapture).
 type CommandDispatcher struct {
 	handlers       map[string]CommandHandler
 	prePostDefault *preDefaultHandlers
 	capture        *HelperCapture
 }
 
-// ErrNoAction is a signal that message was not consumed by pre handler, returning it is the default and intended
+// ErrNoAction signalize that the message was not consumed by pre handler, returning it is the default and intended
 // behaviour, use it in your custom pre handler.
 var ErrNoAction = errors.New("no action")
 
-// ErrDoNotProcess signalize that message was not processed, so Post won't be executed. useful if there is some cleanup in Post handler
+// ErrDoNotProcess signalize that the message was not processed, so Post won't be executed. useful if there is some
+// cleanup in Post handler.
 var ErrDoNotProcess = errors.New("message is skipped")
 
 // NewCommandDispatcher creates new bot dispatcher and attaches itself to the provided tg.UpdateDispatcher.
+//
 // If it is not the intended behaviour, you can provide nil as an argument and get message handler with
 // CommandDispatcher.NewMessageHandler.
 func NewCommandDispatcher(handler *tg.UpdateDispatcher) CommandDispatcher {
@@ -74,6 +81,7 @@ func NewCommandDispatcher(handler *tg.UpdateDispatcher) CommandDispatcher {
 	return c
 }
 
+// WithCommands sets dispatcher command handlers from map.
 func (u CommandDispatcher) WithCommands(commands map[string]CommandHandler) CommandDispatcher {
 	for k, v := range commands {
 		u.handlers[k] = v
@@ -81,22 +89,35 @@ func (u CommandDispatcher) WithCommands(commands map[string]CommandHandler) Comm
 	return u
 }
 
+// WithClient sets dispatcher RPC client.
 func (u CommandDispatcher) WithClient(client *tg.Client) CommandDispatcher {
 	u.capture.Client = client
+	u.capture.Sender = message.NewSender(client)
+	u.capture.Uploader = uploader.NewUploader(client)
+	u.capture.Downloader = downloader.NewDownloader()
 	return u
 }
 
+// WithSender sets dispatcher sender helper.
+//
+// NB: by default dispatcher sender will be created on calling WithClient method.
 func (u CommandDispatcher) WithSender(sender *message.Sender) CommandDispatcher {
 	u.capture.Sender = sender
 	return u
 }
 
+// WithUploader sets dispatcher uploader helper.
+//
+// NB: by default dispatcher uploader will be created on calling WithClient method.
 func (u CommandDispatcher) WithUploader(uploader *uploader.Uploader) CommandDispatcher {
 	u.capture.Uploader = uploader
 	u.capture.Sender = u.capture.Sender.WithUploader(uploader)
 	return u
 }
 
+// WithDownloader sets dispatcher downloader helper.
+//
+// NB: by default dispatcher downloader will be created on calling WithClient method.
 func (u CommandDispatcher) WithDownloader(downloader *downloader.Downloader) CommandDispatcher {
 	u.capture.Downloader = downloader
 	return u
@@ -108,13 +129,13 @@ func (u CommandDispatcher) Pre(handler PrePostDefHandler) CommandDispatcher {
 	return u
 }
 
-// Post sets-up a handler, that will be executed after all handlers
+// Post sets-up a handler, that will be executed after all handlers.
 func (u CommandDispatcher) Post(handler PrePostDefHandler) CommandDispatcher {
 	u.prePostDefault.post = handler
 	return u
 }
 
-// Default sets-up a handler, that will be executed if no commands are recognized.
+// Default sets-up a handler, that will be executed if no commands were recognized.
 func (u CommandDispatcher) Default(handler PrePostDefHandler) CommandDispatcher {
 	u.prePostDefault.def = handler
 	return u
@@ -125,7 +146,7 @@ func (u CommandDispatcher) OnNewCommand(cmd string, handler CommandHandler) {
 	u.handlers[cmd] = handler
 }
 
-// NewMessageHandler returns a handler for tg.UpdateDispatcher.OnNewMessage() method
+// NewMessageHandler returns a handler for tg.UpdateDispatcher.OnNewMessage() method.
 func (u CommandDispatcher) NewMessageHandler(ctx context.Context, e tg.Entities, update *tg.UpdateNewMessage) error {
 	return u.dispatch(ctx, e, update)
 }
