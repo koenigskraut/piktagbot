@@ -48,7 +48,7 @@ func handleOrderUpdate(writer http.ResponseWriter, request *http.Request) {
 	}
 	// get user
 	dbUser := db.User{UserID: verifiedSession.userID}
-	if _, err := dbUser.Get(); err != nil {
+	if err := dbUser.Get(); err != nil {
 		http.Error(writer, "server error", http.StatusInternalServerError)
 		return
 	}

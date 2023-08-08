@@ -59,7 +59,7 @@ func handleWS(writer http.ResponseWriter, request *http.Request) {
 		}
 		// get user
 		dbUser := db.User{UserID: session.userID}
-		if _, err := dbUser.Get(); err != nil {
+		if err := dbUser.Get(); err != nil {
 			log.Println(err)
 			return
 		}

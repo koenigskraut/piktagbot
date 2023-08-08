@@ -11,14 +11,16 @@ import (
 var StartMessage string
 
 func Start(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) (err error) {
-	// TODO temporary regression, no new user check, add it to the DB table
-	//if isNew {
-	//	_, err = answer.StyledText(ctx, html.String(nil, StartMessage))
-	//} else {
-	//	_, err = answer.Text(ctx, "Вижу, Вы уже использовали бота, так что знаете что делать!"+
-	//		"\nА если забыли, просто напишите /help")
-	//}
 	answer := c.Sender.Answer(e, upd)
-	_, err = answer.StyledText(ctx, html.String(nil, StartMessage))
+	_, user := c.UserCapture.(*MessageSemaphore).MessageUserFromUpdate(upd)
+	if user.New {
+		if _, err = answer.StyledText(ctx, html.String(nil, StartMessage)); err != nil {
+			return err
+		}
+		user.New = false
+		return user.Save()
+	}
+	_, err = answer.Text(ctx, "Вижу, Вы уже использовали бота, так что знаете что делать!"+
+		"\nА если забыли, просто напишите /help")
 	return
 }

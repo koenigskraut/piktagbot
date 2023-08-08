@@ -29,8 +29,7 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *cmd.H
 
 		// get or create user record
 		user := &db.User{UserID: uID}
-		_, err := user.Get()
-		if err != nil {
+		if err := user.Get(); err != nil {
 			return err
 		}
 		lockedUser.DBUser = user

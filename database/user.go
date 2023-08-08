@@ -2,21 +2,24 @@ package database
 
 import (
 	"gorm.io/gorm"
+	"time"
 )
 
 const GlobalTagDefault = false
 
 // mysql> describe users;
-// +------------+--------------+------+-----+---------+----------------+
-// | Field      | Type         | Null | Key | Default | Extra          |
-// +------------+--------------+------+-----+---------+----------------+
-// | id         | int unsigned | NO   | PRI | NULL    | auto_increment |
-// | user_id    | bigint       | NO   |     | NULL    |                |
-// | global_tag | tinyint(1)   | YES  |     | NULL    |                |
-// | flag       | text         | YES  |     | NULL    |                |
-// | flag_data  | text         | YES  |     | NULL    |                |
-// | tag_order  | blob         | YES  |     | NULL    |                |
-// +------------+--------------+------+-----+---------+----------------+
+// +------------+--------------+------+-----+-------------------+-------------------+
+// | Field      | Type         | Null | Key | Default           | Extra             |
+// +------------+--------------+------+-----+-------------------+-------------------+
+// | id         | int unsigned | NO   | PRI | NULL              | auto_increment    |
+// | user_id    | bigint       | NO   |     | NULL              |                   |
+// | global_tag | tinyint(1)   | YES  |     | NULL              |                   |
+// | flag       | text         | YES  |     | NULL              |                   |
+// | flag_data  | text         | YES  |     | NULL              |                   |
+// | tag_order  | blob         | YES  |     | NULL              |                   |
+// | new        | tinyint(1)   | NO   |     | NULL              |                   |
+// | added      | datetime     | YES  |     | CURRENT_TIMESTAMP | DEFAULT_GENERATED |
+// +------------+--------------+------+-----+-------------------+-------------------+
 
 type User struct {
 	ID        uint `gorm:"primaryKey"`
@@ -24,19 +27,24 @@ type User struct {
 	GlobalTag bool
 	Flag      string
 	FlagData  string
+	New       bool
 	TagOrder  []byte
+	Added     time.Time `gorm:"->"`
 }
 
 // Get fetches a user record from DB or creates if it doesn't exist
-func (u *User) Get() (new bool, err error) {
+func (u *User) Get() (err error) {
 	if err = DB.Where(&User{UserID: u.UserID}).First(u).Error; err == nil {
 		return
 	} else if err == gorm.ErrRecordNotFound {
-		new = true
-		*u = User{UserID: u.UserID, GlobalTag: GlobalTagDefault}
+		*u = User{UserID: u.UserID, GlobalTag: GlobalTagDefault, New: true}
 		err = DB.Create(u).Error
 	}
 	return
+}
+
+func (u *User) Save() error {
+	return DB.Save(u).Error
 }
 
 func (u *User) SwitchGlobal() (err error) {

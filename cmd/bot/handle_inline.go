@@ -19,7 +19,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		var q []*db.StickerTag
 
 		u := db.User{UserID: update.UserID}
-		if _, e := u.Get(); e != nil {
+		if e := u.Get(); e != nil {
 			return e
 		}
 		if update.Query != "" {
