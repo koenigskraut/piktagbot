@@ -10,7 +10,7 @@ import (
 //go:embed helpMessage.txt
 var HelpMessage string
 
-func Help(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) error {
+func Help(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) error {
 	_, err := c.Sender.Answer(e, upd).StyledText(ctx, html.String(nil, HelpMessage))
 	return err
 }

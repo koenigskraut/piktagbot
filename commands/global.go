@@ -6,11 +6,11 @@ import (
 	"context"
 	"errors"
 	"github.com/gotd/td/tg"
-	db "github.com/koenigskraut/piktagbot/database"
 )
 
-func Global(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) (err error) {
-	user := c.UserCapture.(*db.User)
+func Global(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) (err error) {
+	userID := upd.Message.(*tg.Message).PeerID.(*tg.PeerUser).UserID
+	user := c.UserCapture.(*MessageSemaphore).GetCurrentLock(userID).DBUser
 	answer := c.Sender.Answer(e, upd)
 	// can't update DB — notify user
 	if errDB := user.SwitchGlobal(); errDB != nil {

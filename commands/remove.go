@@ -5,14 +5,13 @@ import (
 	"errors"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/callback"
-	db "github.com/koenigskraut/piktagbot/database"
 	"github.com/koenigskraut/piktagbot/util"
 )
 
-func Remove(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) (err error) {
+func Remove(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) (err error) {
 	m := upd.Message.(*tg.Message)
-	userID := upd.Message.(*tg.Message).PeerID.(*tg.PeerUser).UserID
-	user := c.UserCapture.(*db.User)
+	userID := m.PeerID.(*tg.PeerUser).UserID
+	user := c.UserCapture.(*MessageSemaphore).GetCurrentLock(userID).DBUser
 	answer := c.Sender.Answer(e, upd)
 
 	// case 1: message is a reply, handle re message

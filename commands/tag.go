@@ -11,12 +11,12 @@ import (
 	"strings"
 )
 
-func Tag(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture) (err error) {
+func Tag(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, clear string) (err error) {
 	m := upd.Message.(*tg.Message)
 	userID := m.PeerID.(*tg.PeerUser).UserID
-	user := c.UserCapture.(*db.User)
+	user := c.UserCapture.(*MessageSemaphore).GetCurrentLock(userID).DBUser
 	answer := c.Sender.Answer(e, upd)
-	text := strings.TrimSpace(c.Clear)
+	text := strings.TrimSpace(clear)
 
 	// if there is no tag in a message return immediately
 	if text == "" {
