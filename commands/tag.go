@@ -12,9 +12,7 @@ import (
 )
 
 func Tag(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, clear string) (err error) {
-	m := upd.Message.(*tg.Message)
-	userID := m.PeerID.(*tg.PeerUser).UserID
-	user := c.UserCapture.(*MessageSemaphore).GetCurrentLock(userID).DBUser
+	m, user := c.UserCapture.(*MessageSemaphore).MessageUserFromUpdate(upd)
 	answer := c.Sender.Answer(e, upd)
 	text := strings.TrimSpace(clear)
 
@@ -36,7 +34,7 @@ func Tag(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *Helper
 		if sticker, ok := util.StickerFromMedia(media); ok {
 			// if true, check if it has such a tag, add one if not
 			sTag := db.StickerTag{
-				User:      userID,
+				User:      user.UserID,
 				StickerID: sticker.ID,
 				Tag:       text,
 			}

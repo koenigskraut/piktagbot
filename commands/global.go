@@ -9,8 +9,7 @@ import (
 )
 
 func Global(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) (err error) {
-	userID := upd.Message.(*tg.Message).PeerID.(*tg.PeerUser).UserID
-	user := c.UserCapture.(*MessageSemaphore).GetCurrentLock(userID).DBUser
+	_, user := c.UserCapture.(*MessageSemaphore).MessageUserFromUpdate(upd)
 	answer := c.Sender.Answer(e, upd)
 	// can't update DB — notify user
 	if errDB := user.SwitchGlobal(); errDB != nil {

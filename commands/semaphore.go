@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"github.com/gotd/td/tg"
 	db "github.com/koenigskraut/piktagbot/database"
 	"sync"
 )
@@ -31,4 +32,11 @@ func (ms *MessageSemaphore) GetCurrentLock(userID int64) (lockedUser *UserUnderL
 	}
 	ms.Unlock()
 	return
+}
+
+func (ms *MessageSemaphore) MessageUserFromUpdate(update *tg.UpdateNewMessage) (*tg.Message, *db.User) {
+	m := update.Message.(*tg.Message)
+	userID := m.PeerID.(*tg.PeerUser).UserID
+	user := ms.GetCurrentLock(userID).DBUser
+	return m, user
 }

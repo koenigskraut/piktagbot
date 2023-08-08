@@ -9,9 +9,7 @@ import (
 )
 
 func Remove(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *HelperCapture, _ string) (err error) {
-	m := upd.Message.(*tg.Message)
-	userID := m.PeerID.(*tg.PeerUser).UserID
-	user := c.UserCapture.(*MessageSemaphore).GetCurrentLock(userID).DBUser
+	m, user := c.UserCapture.(*MessageSemaphore).MessageUserFromUpdate(upd)
 	answer := c.Sender.Answer(e, upd)
 
 	// case 1: message is a reply, handle re message
@@ -25,7 +23,7 @@ func Remove(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *Hel
 		media := mRep.(*tg.MessagesMessages).Messages[0].(*tg.Message).Media
 		if sticker, ok := util.StickerFromMedia(media); ok {
 			// if true, send message with tag deletion buttons
-			markup, err := callback.BuildMarkup(sticker.ID, userID, 0)
+			markup, err := callback.BuildMarkup(sticker.ID, user.UserID, 0)
 			if err != nil {
 				var msgErr error
 				if errors.Is(err, callback.MarkupError) {
