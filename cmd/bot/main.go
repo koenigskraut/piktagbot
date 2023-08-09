@@ -47,6 +47,7 @@ func run(ctx context.Context) error {
 				"tag":    cmd.Tag,
 				"remove": cmd.Remove,
 				"global": cmd.Global,
+				"check":  cmd.Check,
 			}
 
 			cmdDispatcher := cmd.NewCommandDispatcher(&dispatcher).

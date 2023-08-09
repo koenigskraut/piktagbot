@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/gotd/td/telegram/message/html"
 	"github.com/gotd/td/tg"
 	cmd "github.com/koenigskraut/piktagbot/commands"
 	db "github.com/koenigskraut/piktagbot/database"
@@ -49,6 +50,10 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *cmd.H
 		case "add-sticker":
 			text := flags.Add(m, user)
 			_, err := c.Sender.Answer(entities, u).Text(ctx, text)
+			return err
+		case "check-tag":
+			text := flags.Check(m, user)
+			_, err := c.Sender.Answer(entities, u).StyledText(ctx, html.String(nil, text))
 			return err
 		default:
 			break

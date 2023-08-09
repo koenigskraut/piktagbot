@@ -47,3 +47,21 @@ func StickerFromMedia(media tg.MessageMediaClass) (*database.Sticker, bool) {
 
 	return s, true
 }
+
+const fmtCheck = "<b>Теги данного стикера:</b>\n\n• <code>%s</code>%s"
+
+func CheckStickerResponse(tags []*database.StickerTag) string {
+	totalLen := 23
+	var fmtSuffix string
+	rows := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		totalLen += 3 + len(tag.Tag)
+		if totalLen > 4096-3 {
+			fmtSuffix = "..."
+			break
+		}
+		rows = append(rows, tag.Tag)
+
+	}
+	return fmt.Sprintf(fmtCheck, strings.Join(rows, "</code>\n• <code>"), fmtSuffix)
+}
