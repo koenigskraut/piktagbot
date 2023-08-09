@@ -1,8 +1,10 @@
 package util
 
 import (
+	"fmt"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/database"
+	"strings"
 )
 
 // StickerFromMedia safely unpacks tg.MessageMediaClass, returns true
