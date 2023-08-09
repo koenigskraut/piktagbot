@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/callback"
+	"github.com/koenigskraut/piktagbot/flags"
 	"github.com/koenigskraut/piktagbot/util"
 )
 
@@ -42,7 +43,7 @@ func Remove(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *Hel
 
 	// case 2: message is not a reply
 	// set a waiting-for-a-sticker flag
-	if err := user.SetFlag("remove-tag", ""); err != nil {
+	if err := user.SetFlag(flags.RemoveTag, ""); err != nil {
 		_, msgErr := answer.Text(ctx, "Что-то пошло не так, попробуйте ещё раз!")
 		return errors.Join(err, msgErr)
 	}

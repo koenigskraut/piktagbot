@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/gotd/td/tg"
 	db "github.com/koenigskraut/piktagbot/database"
+	"github.com/koenigskraut/piktagbot/flags"
 	"github.com/koenigskraut/piktagbot/util"
 	"strings"
 )
@@ -52,7 +53,7 @@ func Tag(ctx context.Context, e tg.Entities, upd *tg.UpdateNewMessage, c *Helper
 
 	// case 2: message is not a reply
 	// remember the tag and set a waiting-for-a-sticker flag
-	if err := user.SetFlag("add-sticker", text); err != nil {
+	if err := user.SetFlag(flags.AddTag, text); err != nil {
 		_, msgErr := answer.Text(ctx, "Что-то пошло не так, попробуйте ещё раз!")
 		return errors.Join(err, msgErr)
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/gotd/td/telegram/message/html"
 	"github.com/gotd/td/tg"
 	cmd "github.com/koenigskraut/piktagbot/commands"
 	db "github.com/koenigskraut/piktagbot/database"
@@ -35,26 +34,15 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *cmd.H
 		}
 		lockedUser.DBUser = user
 
-		// TODO get rid of strings, use enum-like constants, rework flag system
+		answer := c.Sender.Answer(entities, u)
 		// are we waiting for something from user?
 		switch user.Flag {
-		case "remove-tag":
-			text, markup := flags.Remove(m, user)
-			var err error
-			if markup == nil {
-				_, err = c.Sender.Answer(entities, u).Text(ctx, text)
-			} else {
-				_, err = c.Sender.Answer(entities, u).Markup(markup).Text(ctx, text)
-			}
-			return err
-		case "add-sticker":
-			text := flags.Add(m, user)
-			_, err := c.Sender.Answer(entities, u).Text(ctx, text)
-			return err
-		case "check-tag":
-			text := flags.Check(m, user)
-			_, err := c.Sender.Answer(entities, u).StyledText(ctx, html.String(nil, text))
-			return err
+		case flags.RemoveTag:
+			return flags.Remove(ctx, m, user, answer)
+		case flags.AddTag:
+			return flags.Add(ctx, m, user, answer)
+		case flags.CheckTag:
+			return flags.Check(ctx, m, user, answer)
 		default:
 			break
 		}

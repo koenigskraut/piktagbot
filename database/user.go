@@ -25,7 +25,7 @@ type User struct {
 	ID        uint `gorm:"primaryKey"`
 	UserID    int64
 	GlobalTag bool
-	Flag      string
+	Flag      int8
 	FlagData  string
 	New       bool
 	TagOrder  []byte
@@ -51,7 +51,7 @@ func (u *User) SwitchGlobal() (err error) {
 	return DB.Model(u).Update("global_tag", !u.GlobalTag).Error
 }
 
-func (u *User) SetFlag(flag, flagData string) (err error) {
+func (u *User) SetFlag(flag int8, flagData string) (err error) {
 	err = DB.Model(u).Updates(&User{Flag: flag, FlagData: flagData}).Error
 	return
 }

@@ -1,35 +1,44 @@
 package flags
 
 import (
-	"fmt"
+	"context"
+	"errors"
+	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/tg"
 	"github.com/koenigskraut/piktagbot/database"
 	"github.com/koenigskraut/piktagbot/util"
 	"strings"
 )
 
-func Add(m *tg.Message, u *database.User) string {
+func Add(ctx context.Context, m *tg.Message, u *database.User, answer *message.RequestBuilder) error {
 	if strings.HasPrefix(m.Message, "/cancel") {
-		database.DB.Model(&u).Select("Flag", "FlagData").Updates(database.User{Flag: "", FlagData: ""})
-		return "Действие отменено"
-	} else {
-		if sticker, ok := util.StickerFromMedia(m.Media); ok {
-			// if there is a sticker, check if there is such a tag attached to it,
-			// if not — add one
-			sTag := database.StickerTag{
-				User:      u.UserID,
-				StickerID: sticker.ID,
-				Tag:       u.FlagData,
-			}
-			answer, _ := sTag.CheckAndAdd()
-			if !strings.HasPrefix(answer, "Что") {
-				database.DB.Model(u).Select("Flag", "FlagData").Updates(database.User{Flag: "", FlagData: ""})
-			}
-			return answer
-		} else {
-			return fmt.Sprintf("В сообщении нет стикера! Отправьте мне стикер для "+
-				"тега \"%s\" или отмените действие командой /cancel",
-				u.FlagData)
+		u.Flag, u.FlagData = NoFlag, ""
+		if err := u.Save(); err != nil {
+			return err
+		}
+		_, err := answer.Text(ctx, "Действие отменено")
+		return err
+	}
+	sticker, ok := util.StickerFromMedia(m.Media)
+	if !ok {
+		_, err := answer.Text(ctx, "В сообщении нет стикера! Отправьте мне стикер для удаления тегов или "+
+			"отмените действие командой /cancel")
+		return err
+	}
+	// if there is a sticker, check if there is such a tag attached to it,
+	// if not — add one
+	sTag := database.StickerTag{
+		User:      u.UserID,
+		StickerID: sticker.ID,
+		Tag:       u.FlagData,
+	}
+	text, errDB := sTag.CheckAndAdd()
+	if errDB == nil {
+		u.Flag, u.FlagData = NoFlag, ""
+		if err := u.Save(); err != nil {
+			return err
 		}
 	}
+	_, errMsg := answer.Text(ctx, text)
+	return errors.Join(errDB, errMsg)
 }
