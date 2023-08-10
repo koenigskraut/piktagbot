@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"time"
 )
@@ -30,22 +31,39 @@ func (st *StickerTag) GetAllForUser() (tags []*StickerTag, err error) {
 	return tags, err
 }
 
-func (st *StickerTag) CheckAndAdd() (response string, err error) {
+var StickerTagExists = errors.New("sticker-tag pair exists")
+
+func (st *StickerTag) CheckAndAdd() error {
 	var temp StickerTag
-	err = DB.Where(&StickerTag{User: st.User, StickerID: st.StickerID, Tag: st.Tag}).First(&temp).Error
+	err := DB.Where(&StickerTag{User: st.User, StickerID: st.StickerID, Tag: st.Tag}).First(&temp).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
-		return "Что-то пошло не так!", err
+		return err
 	}
 	if temp.ID > 0 {
-		return "У этого стикера уже есть этот тег, действие отменено", nil
+		return StickerTagExists
 	} else {
 		err = DB.Create(st).Error
 		if err != nil {
-			return "Что-то пошло не так, попробуйте ещё раз!", err
+			return err
 		} else {
-			return "Тег добавлен!", nil
+			return nil
 		}
 	}
+}
+
+func (st *StickerTag) CheckForSet() (bool, error) {
+	var temp StickerTag
+	err := DB.Preload("Sticker").
+		Where(&StickerTag{
+			User:    st.User,
+			Sticker: &Sticker{StickerSet: st.Sticker.StickerSet},
+			Tag:     st.Tag,
+			AsSet:   true,
+		}).First(&temp).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, err
+	}
+	return temp.ID > 0, nil
 }
 
 // what is this?
