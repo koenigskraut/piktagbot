@@ -50,7 +50,7 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 			)
 		}
 
-		w := sender.Inline(update).CacheTimeSeconds(0).NextOffset(nextOffset).Gallery(true)
+		w := sender.Inline(update).CacheTimeSeconds(0).Private(true).NextOffset(nextOffset).Gallery(true)
 		webAppUser := &webapp.User{}
 		for _, e := range entities.Users {
 			if e.ID == update.UserID {
@@ -72,9 +72,9 @@ func handleInline(client *tg.Client) func(context.Context, tg.Entities, *tg.Upda
 		URL := fmt.Sprintf("https://%s:%s?%s", appDomain, appPort, string(signed))
 		switch len(as) {
 		case 0:
-			_, err = w.SwitchPM("Начать создавать теги!", "").Set(ctx)
+			_, err = w.SwitchPM("Начать создавать теги!", "a").Set(ctx)
 		case 1:
-			_, err = w.SwitchPM("Добавить теги!", "").Set(ctx)
+			_, err = w.SwitchPM("Добавить теги!", "a").Set(ctx)
 		default:
 			_, err = w.SwitchWebview("Изменить порядок стикеров", URL).Set(ctx, as...)
 		}

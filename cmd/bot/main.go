@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/gotd/td/telegram"
-	"github.com/gotd/td/telegram/downloader"
-	"github.com/gotd/td/telegram/message"
-	"github.com/gotd/td/telegram/uploader"
 	"github.com/gotd/td/tg"
 	cmd "github.com/koenigskraut/piktagbot/commands"
 	db "github.com/koenigskraut/piktagbot/database"
@@ -52,9 +49,6 @@ func run(ctx context.Context) error {
 
 			cmdDispatcher := cmd.NewCommandDispatcher(&dispatcher).
 				WithClient(myClient).
-				WithSender(message.NewSender(myClient)).
-				WithUploader(uploader.NewUploader(myClient)).
-				WithDownloader(downloader.NewDownloader()).
 				WithCommands(cmdMap)
 			cmdDispatcher.Pre(handlePre())
 			cmdDispatcher.Post(handlePost)

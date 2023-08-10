@@ -71,7 +71,7 @@ func BuildMarkup(stickerID uint64, userID int64, page uint16) (tg.ReplyMarkupCla
 	if tagLen == 0 {
 		return nil, MarkupError
 	}
-	const tagsOnPage = 7
+	const tagsOnPage = 8
 	pages := (tagLen - 1) / tagsOnPage
 	// if we are on a page that no longer exists, fix it
 	if int(page) > pages {
@@ -129,7 +129,7 @@ func BuildMarkup(stickerID uint64, userID int64, page uint16) (tg.ReplyMarkupCla
 	doneRow := markup.Row(markup.Callback(TextDone, []byte{ActionDone}))
 
 	rows = make([]tg.KeyboardButtonRow, 0, (maxElementsOnPage-tagsOnPage)+len(relevantTags))
-	rows = append(rows, navButtons)
+	//rows = append(rows, navButtons)
 	for _, t := range relevantTags {
 		b := prepareTagID(t.ID, stickerID, page)
 		button := markup.Callback(t.Tag, b)

@@ -44,7 +44,7 @@ func handleVerification(writer http.ResponseWriter, request *http.Request) {
 	user := params[webapp.UserName].(*webapp.User)
 	query := params[webapp.PrefixName].(*webapp.Prefix).Data
 	userHash := util.HashOfRequestUser(request)
-	if delta := time.Now().Unix() - authDate; delta > 30 {
+	if delta := time.Now().Unix() - authDate; delta > 60 {
 		// session init is definitely failed, maybe user just refreshed the page?
 		session, sessionExists := oneTimeSessions.peek(hash[:16])
 		// session expired, abort
