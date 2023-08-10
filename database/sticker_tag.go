@@ -51,21 +51,6 @@ func (st *StickerTag) CheckAndAdd() error {
 	}
 }
 
-func (st *StickerTag) CheckForSet() (bool, error) {
-	var temp StickerTag
-	err := DB.Preload("Sticker").
-		Where(&StickerTag{
-			User:    st.User,
-			Sticker: &Sticker{StickerSet: st.Sticker.StickerSet},
-			Tag:     st.Tag,
-			AsSet:   true,
-		}).First(&temp).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return false, err
-	}
-	return temp.ID > 0, nil
-}
-
 // what is this?
 //func (st *StickerTagNew) Read() {
 //
