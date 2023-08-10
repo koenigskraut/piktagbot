@@ -40,7 +40,9 @@ func handlePre() func(context.Context, tg.Entities, *tg.UpdateNewMessage, *cmd.H
 		case flags.RemoveTag:
 			return flags.Remove(ctx, m, user, answer)
 		case flags.AddTag:
-			return flags.Add(ctx, m, user, answer)
+			return flags.AddOne(ctx, m, user, answer)
+		case flags.AddTags:
+			return flags.AddMany(ctx, m, user, answer)
 		case flags.CheckTag:
 			return flags.Check(ctx, m, user, answer)
 		default:
